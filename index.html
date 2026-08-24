@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hang Ren</title>
+<meta name="description" content="Hang Ren is Associate Professor of Information Systems and Operations Management at the Costello College of Business, George Mason University. Research on healthcare reimbursement, sustainable operations, and supply chain management.">
+<meta name="author" content="Hang Ren">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<style>
+  :root{
+    --bg:#fbfbf9; --fg:#1b1c1a; --muted:#61665f; --accent:#006633;
+    --accent-soft:#e4efe8; --rule:#e0e0d8; --card:#f4f4ef;
+    --serif:"Iowan Old Style","Charter","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#15171a; --fg:#e7e7e2; --muted:#9ba09a; --accent:#7cc79b;
+      --accent-soft:#1c2a22; --rule:#2b2f33; --card:#1b1e22;
+    }
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--fg);
+    font-family:var(--sans); font-size:16.5px; line-height:1.62;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent); text-decoration:underline; text-underline-offset:2px;
+    text-decoration-thickness:1px; text-decoration-color:color-mix(in srgb,var(--accent) 40%,transparent)}
+  a:hover{text-decoration-color:var(--accent)}
+
+  .wrap{max-width:1120px; margin:0 auto; padding:3.5rem 1.5rem 5rem;
+        display:grid; grid-template-columns:255px 1fr; gap:4.5rem; align-items:start}
+
+  /* ---------- sidebar ---------- */
+  .side{position:sticky; top:2.5rem; max-height:calc(100vh - 5rem); overflow-y:auto}
+  .portrait{width:175px; height:auto; border-radius:4px; display:block; margin-bottom:1.35rem}
+  .name{font-family:var(--serif); font-size:1.72rem; line-height:1.15; font-weight:600; margin:0 0 .1rem}
+  .name .cn{font-size:1.15rem; font-weight:400; color:var(--muted); margin-left:.3rem;
+            font-family:"PingFang SC","Hiragino Sans GB","Songti SC",serif}
+  .role{font-size:.92rem; line-height:1.45; margin:.55rem 0 0}
+  .affil{font-size:.88rem; line-height:1.45; color:var(--muted); margin:.5rem 0 0}
+  .cvbtn{display:inline-block; margin:1.2rem 0 .2rem; padding:.45rem 1rem;
+         background:var(--accent); color:#fff; border-radius:4px; font-size:.88rem;
+         font-weight:600; text-decoration:none}
+  @media (prefers-color-scheme:dark){ .cvbtn{color:#12160f} }
+  .cvbtn:hover{opacity:.88; text-decoration:none}
+  .links{list-style:none; padding:0; margin:1rem 0 0; font-size:.88rem; line-height:1.85}
+  .nav{list-style:none; padding:1rem 0 0; margin:1.1rem 0 0; border-top:1px solid var(--rule);
+       font-size:.84rem; line-height:1.75}
+  .nav a{color:var(--muted); text-decoration:none}
+  .nav a:hover{color:var(--accent)}
+  .addr{font-size:.8rem; color:var(--muted); line-height:1.5; margin:1.2rem 0 0}
+
+  /* ---------- main ---------- */
+  main{min-width:0}
+  h2{font-family:var(--serif); font-size:1.28rem; font-weight:600; letter-spacing:.005em;
+     margin:2.9rem 0 1.15rem; padding-bottom:.45rem; border-bottom:1px solid var(--rule)}
+  main > section:first-child h2{margin-top:0}
+  h3{font-size:.78rem; font-weight:700; text-transform:uppercase; letter-spacing:.09em;
+     color:var(--muted); margin:2rem 0 .85rem}
+  p{margin:0 0 1rem}
+
+
+  ol.pubs{list-style:none; counter-reset:pub; padding:0; margin:0}
+  ol.pubs li{position:relative; padding-left:1.9rem; margin-bottom:1.45rem}
+  ol.pubs li::before{counter-increment:pub; content:counter(pub) "."; position:absolute;
+                     left:0; top:0; color:var(--muted); font-size:.92rem;
+                     font-variant-numeric:tabular-nums}
+  .authors{color:var(--muted)}
+  .venue{font-style:italic}
+  .note{display:block; margin-top:.25rem; font-size:.85rem; color:var(--muted)}
+
+  ul.plain{list-style:none; padding:0; margin:0}
+  ul.plain > li{margin-bottom:1.15rem}
+  .course{font-weight:600}
+  .meta{color:var(--muted); font-size:.88rem}
+  .outlet{font-style:italic; color:var(--muted)}
+
+  footer{margin-top:3.5rem; padding-top:1.2rem; border-top:1px solid var(--rule);
+         font-size:.82rem; color:var(--muted)}
+
+  /* ---------- responsive ---------- */
+  @media (max-width:860px){
+    .wrap{grid-template-columns:1fr; gap:2.75rem; padding:2.25rem 1.35rem 3.5rem}
+    .side{position:static; max-height:none; overflow:visible}
+    .portrait{width:150px}
+    .nav{display:none}
+    h2{margin-top:2.4rem}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <aside class="side">
+    <img class="portrait" src="assets/photo.jpg" alt="Portrait of Hang Ren" width="440" height="661">
+    <h1 class="name">Hang Ren <span class="cn">任航</span></h1>
+    <p class="role">Associate Professor of Information Systems and Operations Management</p>
+    <p class="affil">Costello College of Business<br>George Mason University</p>
+    <p class="affil">Program Coordinator, PhD in Business<br>(Operations and Supply Chain Management)</p>
+
+    <a class="cvbtn" href="cv.pdf">Curriculum Vitae (PDF)</a>
+
+    <ul class="links">
+      <li><a href="mailto:hren5@gmu.edu">hren5@gmu.edu</a></li>
+      <li><a href="https://business.gmu.edu/profiles/hren5">GMU faculty profile</a></li>
+      <li><a href="https://scholar.google.com/citations?user=D_MJtLQAAAAJ">Google Scholar</a></li>
+      <li><a href="https://papers.ssrn.com/sol3/cf_dev/AbsByAuth.cfm?per_id=2880006">SSRN</a></li>
+    </ul>
+
+    <ul class="nav">
+      <li><a href="#about">About</a></li>
+      <li><a href="#publications">Publications</a></li>
+      <li><a href="#review">Under review</a></li>
+      <li><a href="#progress">Work in progress</a></li>
+      <li><a href="#teaching">Teaching</a></li>
+      <li><a href="#media">In the media</a></li>
+    </ul>
+
+    <p class="addr">4400 University Drive, MS 5F4<br>Fairfax, VA 22030<br>703-993-1980</p>
+  </aside>
+
+  <main>
+
+    <section id="about">
+      <h2>About</h2>
+      <p>I am an Associate Professor of Information Systems and Operations Management at the
+        Costello College of Business, George Mason University, where I also coordinate the PhD in
+        Business (Operations and Supply Chain Management concentration).</p>
+      <p>I study healthcare payment design, sustainable business models, AI- and data-driven
+        supply chains, and the operations and marketing interface. I am particularly interested in
+        the role of consumer and employee behavior in shaping both firm profitability and
+        broader environmental and social impact.</p>
+      <p>I received my PhD in Operations Management from University College London in 2018,
+        following an MRes in Management Science and Innovation there and a combined BSc/MSc in
+        Electrical Engineering from Xi'an Jiaotong University.</p>
+
+    </section>
+
+    <section id="publications">
+      <h2>Publications</h2>
+      <ol class="pubs">
+        <li>
+          <span class="authors">Agrawal, V., Bellos, I., and Ren, H.</span> (2026).
+          <a href="https://doi.org/10.1177/10591478261455540">The Role of Dealer Demonstration in
+          the Adoption of Electric Vehicles</a>.
+          <span class="venue">Production and Operations Management</span>, forthcoming.
+        </li>
+        <li>
+          <span class="authors">Ren, H. and Huang, T.</span> (2022).
+          <a href="https://pubsonline.informs.org/doi/abs/10.1287/msom.2021.1041">Opaque Selling and
+          Inventory Management in Vertically Differentiated Markets</a>.
+          <span class="venue">Manufacturing and Service Operations Management</span>,
+          24(5), 2543&ndash;2557.
+        </li>
+        <li>
+          <span class="authors">Arifo&#287;lu, K., Ren, H., and Tezcan, T.</span> (2021).
+          <a href="https://pubsonline.informs.org/doi/abs/10.1287/mnsc.2020.3649">Hospital
+          Readmissions Reduction Program Does Not Provide the Right Incentives: Issues and
+          Remedies</a>.
+          <span class="venue">Management Science</span>, 67(4), 2191&ndash;2210.
+        </li>
+        <li>
+          <span class="authors">Huang, T., Ren, H., and Chen, Y.-J.</span> (2018).
+          <a href="https://onlinelibrary.wiley.com/doi/full/10.1002/nav.21823">Consumer Return
+          Policies in Competitive Markets: An Operations Perspective</a>.
+          <span class="venue">Naval Research Logistics</span>, 65(6&ndash;7), 462&ndash;476.
+        </li>
+        <li>
+          <span class="authors">Ren, H., Huang, T., and Arifo&#287;lu, K.</span> (2018).
+          <a href="https://onlinelibrary.wiley.com/doi/full/10.1111/poms.12850">Managing Service
+          Systems with Unknown Quality and Customer Anecdotal Reasoning</a>.
+          <span class="venue">Production and Operations Management</span>, 27(6), 1038&ndash;1051.
+          <span class="note">Finalist, INFORMS Service Science Section Best Student Paper
+          Competition, 2016</span>
+        </li>
+      </ol>
+
+      <h3>Invited review paper</h3>
+      <ol class="pubs">
+        <li>
+          <span class="authors">Ren, H. and Huang, T.</span> (2018).
+          <a href="https://www.sciencedirect.com/science/article/pii/S0305054817302770">Modeling
+          Customer Bounded Rationality in Operations Management: A Review and Research
+          Opportunities</a>.
+          <span class="venue">Computers &amp; Operations Research</span>, 91, 48&ndash;58.
+        </li>
+      </ol>
+
+      <h3>Book chapter</h3>
+      <ol class="pubs">
+        <li>
+          <span class="authors">Bellos, I., Ren, H., and Ferguson, M.</span> (2022).
+          <a href="https://link.springer.com/chapter/10.1007/978-3-031-45565-0_14">Moving from a
+          Product-Based Economy to a Service-Based Economy for a More Sustainable Future</a>.
+          In Bouchery, Y., Tan, T., Fransoo, J., and Corbett, C. (Eds.),
+          <span class="venue">Sustainable Supply Chains</span>,
+          Springer Series in Supply Chain Management.
+        </li>
+      </ol>
+    </section>
+
+    <section id="review">
+      <h2>Under review</h2>
+      <ol class="pubs">
+        <li>
+          <span class="authors">Arifo&#287;lu, K., Ren, H., and Tezcan, T.</span>
+          <a href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4581295">Promoting
+          Collaborative Care: Relative Performance-based Payment Models for Hospitals and
+          Post-acute Care Providers</a>.
+          <span class="venue">Operations Research</span>, minor revision.
+        </li>
+        <li>
+          <span class="authors">Ren, H., Huang, T., and Perakis, G.</span>
+          <a href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4335284">Impact of Social
+          Learning on Consumer Subsidies and Supplier Capacity for Green Technology Adoption</a>.
+          <span class="venue">Operations Research</span>, major revision.
+        </li>
+        <li>
+          <span class="authors">Shi, Y., Ren, H., Alwan, A., Liu, M., and Yue, X.</span>
+          <a href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=6537845">Forecast Integration
+          in Supply Chains under Freight Rejection</a>.
+          <span class="venue">Production and Operations Management</span>, major revision.
+        </li>
+        <li>
+          <span class="authors">Huang, Y., Ren, H., Shi, Y., and Zhang, Y.</span>
+          Optimizing Two-stage Parcel Sortation Systems with Workload-dependent Human Productivity.
+          <span class="venue">IISE Transactions</span>, major revision.
+        </li>
+        <li>
+          <span class="authors">Shi, Y., Alwan, A., Raghunathan, S., Ren, H., and Yue, X.</span>
+          <a href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5614450">Adopting Automated
+          Contracts in Supply Chains: Impact of Execution Lag and Market Uncertainty</a>.
+          <span class="venue">Information Systems Research</span>, under review.
+        </li>
+      </ol>
+    </section>
+
+    <section id="progress">
+      <h2>Work in progress</h2>
+      <ol class="pubs">
+        <li>
+          <span class="authors">Harutyunyan, M. and Ren, H.</span>
+          Pricing and Designing Open-Table Subscription in Online Multi-player Games.
+        </li>
+        <li>
+          <span class="authors">Hong, Z., Ren, H., and Shi, Y.</span>
+          Green Technology Adoption in Social Networks.
+        </li>
+        <li>
+          <span class="authors">Li, C., Lu, T., Ren, H., and Yang, R.</span>
+          Managing Shipment Quality: The Interplay between Monitoring Technologies and Inspection.
+        </li>
+      </ol>
+    </section>
+
+    <section id="teaching">
+      <h2>Teaching</h2>
+      <ul class="plain">
+        <li>
+          <span class="course">MSBA 757 &mdash; Prescriptive Analytics</span><br>
+          <span class="meta">Graduate core &middot; 2026&ndash;present</span>
+        </li>
+        <li>
+          <span class="course">OSCM 303 &mdash; Operations Management</span><br>
+          <span class="meta">Undergraduate core &middot; 2018&ndash;present</span>
+        </li>
+        <li>
+          <span class="course">OSCM 435 &mdash; Business Process Analysis and Simulation</span><br>
+          <span class="meta">Undergraduate elective &middot; 2019&ndash;20, 2022&ndash;23</span>
+        </li>
+      </ul>
+    </section>
+
+    <section id="media">
+      <h2>In the media</h2>
+      <ul class="plain">
+        <li>
+          <a href="https://business.gmu.edu/news/2024-08/will-everything-service-live-its-great-expectations">Will
+          &ldquo;everything as a service&rdquo; live up to its great expectations?</a><br>
+          <span class="outlet">Costello College of Business, George Mason University</span>
+          <span class="meta">&middot; August 27, 2024</span>
+        </li>
+        <li>
+          <a href="https://mitsloan.mit.edu/ideas-made-to-matter/when-evaluating-green-technologies-wary-consumers-rely-social-learning">When
+          evaluating green technologies, wary consumers rely on social learning</a><br>
+          <span class="outlet">MIT Sloan School of Management</span>
+          <span class="meta">&middot; March 12, 2024</span>
+        </li>
+        <li>
+          <a href="https://www.mcclatchydc.com/article253415570.html">President Biden&rsquo;s
+          electric car order doesn&rsquo;t make it easier to buy one. Here&rsquo;s why</a><br>
+          <span class="outlet">McClatchy DC</span>
+          <span class="meta">&middot; August 16, 2021</span>
+        </li>
+        <li>
+          <a href="https://www.washingtontimes.com/news/2021/aug/5/consumer-choice-free-market-biggest-obstacles-bide/">Consumer
+          choice, free market biggest obstacles to Biden&rsquo;s ambitious plan to phase out gas
+          cars</a><br>
+          <span class="outlet">The Washington Times</span>
+          <span class="meta">&middot; August 5, 2021</span>
+        </li>
+        <li>
+          <a href="https://www.mic.com/p/are-electric-cars-really-green-71944721">Are electric cars
+          really green?</a><br>
+          <span class="outlet">Mic</span>
+          <span class="meta">&middot; April 19, 2021</span>
+        </li>
+        <li>
+          <a href="https://web.archive.org/web/20240723121432/https://issuu.com/georgemasonsom/docs/19-057_impact_final_hr">Using process
+          management to examine unintended consequences of health care regulation</a><br>
+          <span class="outlet">Impact Magazine</span>
+          <span class="meta">&middot; September 25, 2019</span>
+        </li>
+      </ul>
+    </section>
+
+    <footer>
+      Page updated August 2026. Full record of talks, service, and awards in the
+      <a href="cv.pdf">CV</a>.
+    </footer>
+
+  </main>
+</div>
+</body>
+</html>
