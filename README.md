@@ -53,6 +53,12 @@ and reformat it to match its new neighbours:
 Published entries carry authors, year, linked title, italic venue, volume(issue), pages.
 Under-review entries carry authors, title, venue, status — no year, no volume.
 
+### Teaching tools (`teaching/`)
+
+Interactive course pages (simulations and similar) live in `teaching/<tool>/index.html` and
+are served at `hren5.github.io/teaching/<tool>/`. They use JavaScript, unlike the main page,
+because Canvas cannot run scripts itself. See `teaching/README.md` for the list.
+
 ### Adding a new working paper or media mention
 
 Copy the nearest existing `<li>` in that section, paste it, and change the text. The

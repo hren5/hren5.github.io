@@ -1,0 +1,1393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Café Queue Lab</title>
+<meta name="description" content="Interactive single-server queue simulation of a campus coffee shop, for OSCM 303 Service Operations I.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: the café floor on the left (animation, live numbers, charts); a lesson rail on the right with one tab per bullet of the "Building Intuition" slide; the run comparison table below both. */
+:root {
+  --bg: #f2f5f2; --surface: #ffffff; --surface-2: #e7ede8; --ink: #15201b; --ink-2: #3f4d46; --muted: #5c6962; --rule: #d2dbd4;
+  --accent: #006f51; --accent-strong: #00563f; --on-accent: #ffffff; --accent-soft: #dcefe6; --gold: #e8a91b; --danger: #b3261e; --danger-soft: #fbe3e1;
+  --s-line: #b97a12; --s-counter: #0f7f58;
+  --wall: #ebe3d4; --wall-2: #dfd2bd; --floor: #c8a27a; --floor-2: #bd966c; --counter: #e2e7e0; --counter-top: #9aa89c; --counter-ink: #3f4d46; --frame: #8b6a4e; --coffee: #7a4524; --board: #24302a; --board-ink: #f3efe2; --metal: #4a524f; --scene-ink: #2a221d; --pants: #33404d; --sky: #cfe6f2; --tree: #5f8f55;
+  --f-display: "Archivo", "Arial Narrow", "Helvetica Neue", system-ui, sans-serif;
+  --f-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --radius: 10px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1412; --surface: #17201c; --surface-2: #1f2a25; --ink: #e6ece8; --ink-2: #bac6bf; --muted: #95a29b; --rule: #2d3933;
+    --accent: #43b98e; --accent-strong: #63cba3; --on-accent: #062519; --accent-soft: #173a2d; --gold: #f2c14e; --danger: #f2948b; --danger-soft: #3d1d1a;
+    --s-line: #be8524; --s-counter: #35a27a;
+    --wall: #2a2621; --wall-2: #24201c; --floor: #4a3a2c; --floor-2: #433426; --counter: #46535a; --counter-top: #6d7c83; --counter-ink: #e6ece8; --frame: #6e5441; --coffee: #d29a5a; --board: #101814; --board-ink: #ece7d6; --metal: #7a8480; --scene-ink: #f2eadf; --pants: #55657a; --sky: #1c2a3d; --tree: #2f4a35;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1412; --surface: #17201c; --surface-2: #1f2a25; --ink: #e6ece8; --ink-2: #bac6bf; --muted: #95a29b; --rule: #2d3933;
+  --accent: #43b98e; --accent-strong: #63cba3; --on-accent: #062519; --accent-soft: #173a2d; --gold: #f2c14e; --danger: #f2948b; --danger-soft: #3d1d1a;
+  --s-line: #be8524; --s-counter: #35a27a;
+  --wall: #2a2621; --wall-2: #24201c; --floor: #4a3a2c; --floor-2: #433426; --counter: #46535a; --counter-top: #6d7c83; --counter-ink: #e6ece8; --frame: #6e5441; --coffee: #d29a5a; --board: #101814; --board-ink: #ece7d6; --metal: #7a8480; --scene-ink: #f2eadf; --pants: #55657a; --sky: #1c2a3d; --tree: #2f4a35;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.5; }
+[hidden] { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.page { max-width: 1320px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 48px; display: grid; gap: 24px; }
+@media (min-width: 700px) { .page { padding-inline: 28px; } }
+
+h1, h2, h3 { font-family: var(--f-display); font-stretch: 78%; text-wrap: balance; margin: 0; line-height: 1.1; }
+h1 { font-size: clamp(2rem, 4.6vw, 3.1rem); font-weight: 800; letter-spacing: -0.01em; }
+h2 { font-size: 1.45rem; font-weight: 750; }
+h3 { font-size: 1.12rem; font-weight: 700; }
+p { margin: 0; }
+b, strong { font-weight: 700; }
+.eyebrow { font-family: var(--f-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.masthead { display: grid; gap: 8px; }
+.masthead .lede { max-width: 72ch; color: var(--ink-2); font-size: 1.04rem; }
+.masthead h1 span { color: var(--accent); }
+
+.app { display: grid; gap: 24px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+@media (min-width: 1040px) { .app { grid-template-columns: minmax(0, 1.7fr) minmax(330px, 1fr); } }
+.stage, .rail { min-width: 0; display: grid; gap: 16px; }
+
+.scene-card { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); overflow: hidden; }
+.scene-wrap { position: relative; width: 100%; }
+#scene { display: block; width: 100%; }
+.scene-foot { display: grid; gap: 12px; padding: 12px 14px 14px; border-top: 1px solid var(--rule); }
+.status { font-size: 0.95rem; color: var(--ink-2); min-height: 1.5em; }
+.status b { color: var(--ink); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.label-sm { font-size: 0.85rem; color: var(--muted); }
+.speed { display: flex; align-items: center; gap: 10px; flex: 1 1 360px; min-width: 0; }
+.speed label { font-weight: 700; font-size: 0.93rem; }
+.speed input { flex: 1 1 auto; min-width: 110px; }
+.speed output { font-family: var(--f-mono); font-size: 0.85rem; color: var(--accent); font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+.btn { font: inherit; font-size: 0.93rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--rule); background: var(--surface-2); color: var(--ink); padding: 7px 13px; cursor: pointer; line-height: 1.25; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.primary:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
+.btn.event { background: transparent; border-style: dashed; font-weight: 600; }
+.btn:disabled { opacity: 0.6; cursor: progress; }
+button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+select { font: inherit; font-size: 0.93rem; color: var(--ink); background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 6px 8px; max-width: 100%; }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: var(--radius); overflow: hidden; }
+.tile { background: var(--surface); padding: 10px 12px; display: grid; gap: 2px; align-content: start; }
+.tile .k { font-size: 0.8rem; color: var(--muted); }
+.tile .v { font-family: var(--f-mono); font-size: 1.25rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.tile .s { font-size: 0.78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tile.hot .v { color: var(--accent); }
+
+.chart-card { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); padding: 12px 14px; margin: 0; display: grid; gap: 8px; }
+.chart-head { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: space-between; }
+.seg-btns { display: inline-flex; flex-wrap: wrap; gap: 2px; background: var(--surface-2); border-radius: 8px; padding: 2px; }
+.seg-btns button { font: inherit; font-size: 0.85rem; font-weight: 700; border: 0; background: transparent; color: var(--ink-2); padding: 5px 10px; border-radius: 6px; cursor: pointer; }
+.seg-btns button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 0 0 1px var(--rule); }
+.seg-btns button:disabled { opacity: 0.45; cursor: not-allowed; }
+.chart-cap { font-size: 0.9rem; font-weight: 700; }
+.chart-cap span { font-weight: 400; color: var(--muted); }
+.chart-wrap { position: relative; }
+#chart { display: block; width: 100%; height: 180px; }
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-size: 0.8rem; padding: 4px 8px; border-radius: 6px; white-space: nowrap; transform: translate(-50%, -115%); font-variant-numeric: tabular-nums; z-index: 2; }
+
+.longrun { background: var(--accent-soft); border-radius: var(--radius); padding: 12px 14px; display: grid; gap: 8px; }
+.longrun p { font-size: 0.95rem; }
+.longrun .warn { color: var(--danger); font-weight: 700; }
+
+/* Rail */
+.rail-card { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); }
+.tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding: 8px; border-bottom: 1px solid var(--rule); }
+@media (max-width: 520px) { .tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+[role="tab"] { font: inherit; font-size: 0.86rem; font-weight: 700; line-height: 1.2; text-align: center; padding: 7px 4px; border-radius: 7px; border: 0; background: transparent; color: var(--ink-2); cursor: pointer; }
+[role="tab"]:hover { background: var(--surface-2); }
+[role="tab"][aria-selected="true"] { background: var(--accent); color: var(--on-accent); }
+[role="tab"]:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+[role="tabpanel"] { padding: 16px; display: grid; gap: 14px; }
+[role="tabpanel"] > p, .lever > p { max-width: 62ch; }
+.from-slide { font-family: var(--f-mono); font-size: 0.8rem; letter-spacing: 0.02em; color: var(--accent); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-family: var(--f-mono); font-size: 0.8rem; background: var(--surface-2); border-radius: 999px; padding: 3px 10px; font-variant-numeric: tabular-nums; }
+.chip.bad { background: var(--danger-soft); color: var(--danger); font-weight: 600; }
+
+.controls { display: grid; gap: 12px; }
+.ctl { display: grid; gap: 4px; border: 0; margin: 0; padding: 0; min-width: 0; }
+.ctl-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.ctl label, .ctl legend { font-weight: 700; font-size: 0.93rem; padding: 0; }
+.ctl output { font-family: var(--f-mono); font-size: 0.88rem; font-variant-numeric: tabular-nums; color: var(--accent); font-weight: 600; }
+.ctl-hint { font-size: 0.82rem; color: var(--muted); }
+.seg { display: grid; gap: 6px; }
+.seg label { font-weight: 400; display: flex; gap: 8px; align-items: flex-start; font-size: 0.92rem; }
+.seg input { margin-top: 4px; accent-color: var(--accent); }
+
+.readout { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.readout.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ro { background: var(--surface-2); border-radius: 8px; padding: 8px 10px; display: grid; gap: 2px; }
+.ro .k { font-size: 0.78rem; color: var(--muted); }
+.ro .v { font-family: var(--f-mono); font-size: 1.3rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ro .v.bad { color: var(--danger); }
+
+.predict { border-left: 3px solid var(--gold); padding: 2px 0 2px 12px; display: grid; gap: 6px; }
+.predict p { font-size: 0.95rem; }
+details summary { cursor: pointer; font-weight: 700; color: var(--accent); font-size: 0.92rem; }
+details[open] summary { margin-bottom: 4px; }
+details p { font-size: 0.93rem; color: var(--ink-2); }
+
+.lever { border-top: 1px solid var(--rule); padding-top: 14px; display: grid; gap: 10px; }
+.lever h3 .sym { font-family: var(--f-body); font-stretch: 100%; font-weight: 400; font-size: 0.92rem; color: var(--muted); margin-left: 6px; }
+ol.steps, ul.challenges { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; font-size: 0.95rem; }
+ul.challenges { gap: 12px; }
+
+/* Waiting-time tab: timeline and equation */
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 0.82rem; color: var(--ink-2); }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 5px; }
+.seg-line { background: var(--s-line); }
+.seg-counter { background: var(--s-counter); }
+.gantt { display: grid; gap: 8px; }
+.g-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; }
+.g-name { font-size: 0.8rem; color: var(--ink-2); }
+.g-txt { font-size: 0.8rem; font-variant-numeric: tabular-nums; text-align: right; }
+.g-track { grid-column: 1 / -1; position: relative; height: 14px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
+.g-track span { position: absolute; top: 0; bottom: 0; }
+.g-axis { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--muted); font-family: var(--f-mono); }
+.eqs { display: grid; gap: 12px; }
+.eq { display: grid; gap: 6px; }
+.eq-name { font-size: 0.85rem; font-weight: 700; }
+.eq-row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 6px; }
+.eq-box { background: var(--surface-2); border-radius: 8px; padding: 6px 8px; border-top: 4px solid var(--ink-2); display: grid; gap: 0; text-align: center; }
+.eq-box.line { border-top-color: var(--s-line); }
+.eq-box.counter { border-top-color: var(--s-counter); }
+.eq-box .v { font-family: var(--f-mono); font-weight: 600; font-size: 1.2rem; font-variant-numeric: tabular-nums; }
+.eq-box .k { font-size: 0.75rem; color: var(--muted); }
+.eq-op { font-family: var(--f-mono); font-size: 1.3rem; font-weight: 600; color: var(--ink-2); }
+.note-bad { color: var(--danger); font-size: 0.82rem; font-weight: 700; }
+
+/* Comparison table */
+.runs { display: grid; gap: 10px; }
+.runs-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline; justify-content: space-between; }
+.runs > p { color: var(--ink-2); max-width: 80ch; }
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); }
+table { border-collapse: collapse; width: 100%; font-size: 0.88rem; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+th { font-weight: 700; color: var(--ink-2); background: var(--surface-2); font-size: 0.8rem; }
+th.l, td.l { text-align: left; }
+td.key { font-weight: 700; }
+tbody tr:last-child td { border-bottom: 0; }
+.tag-bad { display: inline-block; margin-left: 6px; font-size: 0.72rem; font-weight: 700; color: var(--danger); background: var(--danger-soft); border-radius: 999px; padding: 1px 7px; }
+.empty td { text-align: left; color: var(--muted); white-space: normal; }
+
+.how { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); padding: 12px 16px; }
+.how summary { font-size: 1rem; color: var(--ink); }
+.how ul { margin: 8px 0 4px; padding-left: 1.2em; display: grid; gap: 6px; max-width: 85ch; color: var(--ink-2); font-size: 0.95rem; }
+.err { background: var(--danger-soft); color: var(--danger); padding: 10px 14px; border-radius: 8px; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <p class="eyebrow">OSCM 303 · Service Operations I · Building intuition</p>
+    <h1>Café <span>Queue</span> Lab</h1>
+    <p class="lede">Campus Café is a made-up coffee shop on the Fairfax campus with one barista. Customers walk in, wait in line, get their cups made, and leave. The cups above each customer's head are the order: more cups, longer service. Watch how uneven arrivals and uneven orders create waiting, then use the tabs to test each idea from the slide.</p>
+  </header>
+  <noscript><p class="err">This lab needs JavaScript. Open the file in Chrome, Edge, Firefox, or Safari.</p></noscript>
+  <p id="boot-error" class="err" hidden></p>
+
+  <main class="app">
+    <section class="stage" aria-labelledby="stage-h">
+      <h2 id="stage-h" class="sr-only">The café</h2>
+      <div class="scene-card">
+        <div class="scene-wrap">
+          <canvas id="scene" role="img" aria-label="Animated coffee shop. Customers enter at the left, wait in line, are served one at a time by the barista at the counter on the right, and leave through the exit. The text below the picture describes what is happening now.">Animated coffee shop with one barista.</canvas>
+        </div>
+        <div class="scene-foot">
+          <p id="status" class="status">Loading the café…</p>
+          <div class="row">
+            <button id="btn-play" class="btn primary" type="button">Play</button>
+            <button id="btn-reset" class="btn" type="button">Replay this day</button>
+            <button id="btn-newday" class="btn" type="button">New random day</button>
+            <button id="btn-defaults" class="btn" type="button" title="Back to this tab's starting settings, restarted from time zero">Reset</button>
+            <div class="speed">
+              <label for="speed">Speed</label>
+              <input type="range" id="speed" min="0" max="9" step="1" value="3">
+              <output id="speed-out" for="speed">1 second = 30 seconds</output>
+            </div>
+          </div>
+          <div class="row">
+            <span class="label-sm">Make something happen:</span>
+            <button id="btn-class" class="btn event" type="button">A class lets out: 5 walk in</button>
+            <button id="btn-office" class="btn event" type="button">An office order: 10 cups</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats" aria-label="Numbers for this day so far">
+        <div class="tile"><span class="k">Time open</span><span class="v" id="st-time">0 min</span><span class="s" id="st-time-s">&nbsp;</span></div>
+        <div class="tile"><span class="k">In line now</span><span class="v" id="st-q">0</span><span class="s" id="st-q-s">longest so far 0</span></div>
+        <div class="tile hot"><span class="k">Barista busy</span><span class="v" id="st-busy">–</span><span class="s" id="st-busy-s">λ/μ = –</span></div>
+        <div class="tile"><span class="k">Avg time in line</span><span class="v" id="st-wq">–</span><span class="s">per customer served</span></div>
+        <div class="tile"><span class="k">Avg time at counter</span><span class="v" id="st-ws">–</span><span class="s">while cups are made</span></div>
+        <div class="tile"><span class="k">Avg time in café</span><span class="v" id="st-w">–</span><span class="s">line + counter</span></div>
+        <div class="tile"><span class="k">Customers served</span><span class="v" id="st-served">0</span><span class="s" id="st-served-s">of 0 who came in</span></div>
+        <div class="tile"><span class="k">Had to wait</span><span class="v" id="st-waited">–</span><span class="s">of customers served</span></div>
+        <div class="tile"><span class="k">Walked away</span><span class="v" id="st-walk">0</span><span class="s">found the line full</span></div>
+      </div>
+
+      <figure class="chart-card">
+        <div class="chart-head">
+          <div class="seg-btns" role="group" aria-label="What to plot">
+            <button type="button" data-chart-mode="queue" aria-pressed="true">People in line</button>
+            <button type="button" data-chart-mode="avg" aria-pressed="false">Average time in line</button>
+            <button type="button" data-chart-mode="dist" aria-pressed="false">Time-in-line distribution</button>
+          </div>
+          <div class="seg-btns" role="group" aria-label="Which data">
+            <button type="button" data-chart-src="day" aria-pressed="true">This day</button>
+            <button type="button" data-chart-src="long" aria-pressed="false" disabled title="Click Long run first">Long run</button>
+          </div>
+        </div>
+        <figcaption class="chart-cap" id="chart-cap">People waiting in line</figcaption>
+        <div class="chart-wrap">
+          <canvas id="chart" role="img" aria-label="Chart of the selected measure. The caption above names what is plotted."></canvas>
+          <div id="chart-tip" class="tip" hidden></div>
+        </div>
+      </figure>
+
+      <div class="longrun">
+        <div class="row">
+          <button id="btn-long" class="btn primary" type="button">Long run: simulate 10,000 hours</button>
+          <span class="label-sm">About 4 years of business with the current settings. Adds a row to the table below and shows the run in the chart.</span>
+        </div>
+        <p id="long-result">No long-run result yet.</p>
+      </div>
+    </section>
+
+    <aside class="rail" aria-label="Ideas from the slide">
+      <div class="rail-card">
+        <div class="tabs" role="tablist" aria-label="Ideas from the Building Intuition slide">
+          <button role="tab" type="button" id="tab-why" aria-controls="panel-why" aria-selected="true">Why μ &gt; λ</button>
+          <button role="tab" type="button" id="tab-util" aria-controls="panel-util" aria-selected="false" tabindex="-1">Utilization</button>
+          <button role="tab" type="button" id="tab-wait" aria-controls="panel-wait" aria-selected="false" tabindex="-1">Waiting time</button>
+          <button role="tab" type="button" id="tab-cut" aria-controls="panel-cut" aria-selected="false" tabindex="-1">Reduce waiting</button>
+          <button role="tab" type="button" id="tab-play" aria-controls="panel-play" aria-selected="false" tabindex="-1">Playground</button>
+        </div>
+
+        <section role="tabpanel" id="panel-why" aria-labelledby="tab-why">
+          <p class="from-slide">On the slide: service rate μ &gt; arrival rate λ</p>
+          <h2>Why the barista must be faster than demand</h2>
+          <p>The barista can serve <b>μ = 20</b> customers per hour, and <b>λ = 20</b> customers arrive per hour. Capacity matches demand exactly, like the balanced process on the "Life Without Variability" slide.</p>
+          <div class="readout two">
+            <div class="ro"><span class="k">λ/μ</span><span class="v" data-out="rho">–</span></div>
+            <div class="ro"><span class="k">In line now</span><span class="v" data-live="qnow">–</span></div>
+          </div>
+          <div class="controls" data-controls="vary lam"></div>
+          <div class="predict">
+            <p><b>Predict, then run.</b> Right now there is no variability: a customer walks in every 3 minutes and every order is 3 cups, which takes 3 minutes. Switch to <b>Real life</b>. The averages stay the same. What happens to the line? Watch for a while, then click <b>Long run</b> under the café.</p>
+            <details><summary>Show what happens</summary>
+              <p>The line never settles down. In the long run the chart of people in line keeps climbing and the average time in line keeps rising; after 10,000 hours more than a hundred people are in line. Each minute the barista stands idle because nobody is there is capacity lost for good; it cannot be saved for the next rush. So capacity equal to demand on average is not enough. This is the flaw of averages, and it is why μ has to be larger than λ.</p>
+            </details>
+          </div>
+          <div class="predict">
+            <p><b>Then try.</b> Keep Real life. Set λ to 22, just above μ, and click Long run. Then try λ = 18.</p>
+            <details><summary>Show what happens</summary>
+              <p>At λ = 22 the line explodes: it grows by about 2 people every hour (22 arrive, at most 20 are served), so after 10,000 hours about 20,000 people are waiting. At λ = 18 the barista has spare capacity to catch up after each rush, and the line goes up and down instead of growing. It is still long, about 17 minutes in line on average.</p>
+            </details>
+          </div>
+        </section>
+
+        <section role="tabpanel" id="panel-util" aria-labelledby="tab-util" hidden>
+          <p class="from-slide">On the slide: server is busy for λ/μ of the time (utilization)</p>
+          <h2>Utilization: how busy is the barista?</h2>
+          <p>About <b>λ = 10</b> customers arrive per hour, and the barista can serve <b>μ = 20</b> per hour. So the barista should be busy λ/μ = 10/20 = 50% of the time.</p>
+          <div class="readout">
+            <div class="ro"><span class="k">λ/μ</span><span class="v" data-out="rho">–</span></div>
+            <div class="ro"><span class="k">Busy this day</span><span class="v" data-live="busy">–</span></div>
+            <div class="ro"><span class="k">Busy, long run</span><span class="v" data-long="util">–</span></div>
+          </div>
+          <div class="controls" data-controls="lam sec"></div>
+          <div class="predict">
+            <p><b>Predict, then run.</b> Raise λ to 15 per hour. What share of the time will the barista be busy? Will the time in line go up by the same 50%?</p>
+            <details><summary>Show what happens</summary>
+              <p>The barista is busy 15/20 = 75% of the time: utilization is simply λ/μ. Time in line goes up far more than 50%. In the long run it triples, from about 1.8 to about 5.5 minutes. Click Long run before and after the change to see it.</p>
+            </details>
+          </div>
+          <div class="predict">
+            <p><b>Then try.</b> Make the barista faster: 45 seconds per cup. What is μ now?</p>
+            <details><summary>Show what happens</summary>
+              <p>An average order is 3 cups × 45 seconds = 2.25 minutes, so μ = 60 ÷ 2.25 ≈ 26.7 customers per hour. With λ = 15 the barista is busy 15/26.7 ≈ 56% of the time.</p>
+            </details>
+          </div>
+        </section>
+
+        <section role="tabpanel" id="panel-wait" aria-labelledby="tab-wait" hidden>
+          <p class="from-slide">On the slide: waiting time in system = time-in-line + time-in-service</p>
+          <h2>Where does a customer's time go?</h2>
+          <p>Each customer's time in the café has two parts: time in line, waiting for the barista, and time at the counter, while the cups are made. Below are the last 8 customers as the day runs.</p>
+          <div class="legend"><span><i class="seg-line"></i>Time in line</span><span><i class="seg-counter"></i>Time at the counter</span></div>
+          <div class="gantt" id="gantt"></div>
+          <div class="eqs" id="wait-eq"></div>
+          <div class="controls" data-controls="lam sec"></div>
+          <div class="predict">
+            <p><b>Predict, then run.</b> With λ = 10 and μ = 20 the barista is idle half the time. Do customers still wait in line?</p>
+            <details><summary>Show what happens</summary>
+              <p>Yes. About half of the customers find the barista busy and wait, about 1.8 minutes on average in the long run. Customers arrive in bunches and some orders are big, so the idle minutes and the busy minutes come at different times.</p>
+            </details>
+          </div>
+          <div class="predict">
+            <p><b>Then try.</b> Lower λ to 5 per hour. Which part shrinks: time in line or time at the counter?</p>
+            <details><summary>Show what happens</summary>
+              <p>Only time in line, to about 0.6 minutes in the long run. Time at the counter stays at about 3 minutes, because it depends on the order and the barista, not on how many other customers there are.</p>
+            </details>
+          </div>
+        </section>
+
+        <section role="tabpanel" id="panel-cut" aria-labelledby="tab-cut" hidden>
+          <p class="from-slide">On the slide: reduce average waiting time by…</p>
+          <h2>Four ways to cut the wait</h2>
+          <p>Starting point: <b>λ = 16</b> and <b>μ = 20</b> per hour (the barista is 80% busy), random arrivals, 1 to 5 cups, no limit on the line.</p>
+          <ol class="steps">
+            <li>Click <b>Long run</b> to record the starting point.</li>
+            <li>Change one lever below, then click <b>Long run</b> again.</li>
+            <li>Click <b>Reset</b> (under the café) to go back to the starting point before you try the next lever.</li>
+          </ol>
+          <div class="chips" data-out="chips"></div>
+
+          <div class="lever">
+            <h3>Increase μ <span class="sym">faster barista</span></h3>
+            <div class="controls" data-controls="sec"></div>
+            <div class="predict">
+              <p><b>Predict.</b> Cut the time per cup from 60 to 45 seconds. How much does time in line drop?</p>
+              <details><summary>Show what happens</summary>
+                <p>From about 7.3 to about 2.1 minutes in the long run. Utilization falls from 80% to 60%. Near full utilization, a little extra capacity cuts waiting a lot.</p>
+              </details>
+            </div>
+          </div>
+
+          <div class="lever">
+            <h3>Reduce λ <span class="sym">fewer customers per hour</span></h3>
+            <div class="controls" data-controls="lam"></div>
+            <div class="predict">
+              <p><b>Predict.</b> Lower λ from 16 to 12 per hour. What happens to time in line?</p>
+              <details><summary>Show what happens</summary>
+                <p>It falls from about 7.3 to about 2.8 minutes. The barista is 60% busy, the same as with the faster barista, but each order still takes 3 minutes at the counter.</p>
+              </details>
+            </div>
+          </div>
+
+          <div class="lever">
+            <h3>Reduce variability <span class="sym">same averages, less uncertainty</span></h3>
+            <div class="controls" data-controls="pattern mix"></div>
+            <div class="predict">
+              <p><b>Predict.</b> Keep λ = 16 and μ = 20. Make the orders less variable: 2 to 4 cups, then every customer 3 cups. Then put the orders back to 1 to 5 cups and make the arrivals Steady. Which change helps most?</p>
+              <details><summary>Show what happens</summary>
+                <p>Less variable orders help a little: time in line goes from about 7.3 minutes (1 to 5 cups) to about 6.5 (2 to 4 cups) and 6.0 (every customer 3 cups). Steady arrivals help far more, down to about 0.7 minutes, because in this café most of the waiting comes from customers arriving in bunches. More variable orders do the opposite: with exponential orders, the M/M/1 case, time in line rises to about 12 minutes.</p>
+              </details>
+            </div>
+          </div>
+
+          <div class="lever">
+            <h3>Limit waiting space <span class="sym">at the cost of throughput</span></h3>
+            <div class="controls" data-controls="cap"></div>
+            <div class="predict">
+              <p><b>Predict.</b> Allow at most 5 people in line. What happens to time in line, and to the number of customers served per hour?</p>
+              <details><summary>Show what happens</summary>
+                <p>Time in line falls from about 7.3 to about 4.6 minutes, but about 3% of customers find the line full and walk away. The café serves about 15.5 customers per hour instead of 16, and the barista is busy less often. Shorter waits come at the cost of lower throughput.</p>
+              </details>
+            </div>
+          </div>
+        </section>
+
+        <section role="tabpanel" id="panel-play" aria-labelledby="tab-play" hidden>
+          <p class="from-slide">Not graded · just for fun</p>
+          <h2>Playground</h2>
+          <p>Every setting in one place. Change anything while the café runs, or use the buttons under the picture to send in a crowd or a big order.</p>
+          <div class="chips" data-out="chips"></div>
+          <div class="controls" data-controls="lam sec pattern mix cap"></div>
+          <h3>Challenges</h3>
+          <ul class="challenges">
+            <li>With λ = 16 and 1 to 5 cups, what is the slowest barista (most seconds per cup) that keeps the long-run time in line under 3 minutes?
+              <details><summary>Show the answer</summary><p>Somewhere between 45 and 50 seconds per cup. At 45 seconds the long-run time in line is about 2.1 minutes; at 50 seconds it is just over 3.</p></details></li>
+            <li>Set λ to 18, then 19. The barista is only a little busier each time. What happens to the long-run time in line?
+              <details><summary>Show the answer</summary><p>It roughly doubles each time: about 7 minutes at λ = 16, 17 at λ = 18, and 35 at λ = 19. Waiting explodes as utilization approaches 100%.</p></details></li>
+            <li>Set the arrivals to Random and the orders to Exponential. This is exactly the M/M/1 queue from class. Click Long run and compare the time in line with the formula W<sub>q</sub> = λ / (μ(μ − λ)).
+              <details><summary>Show the answer</summary><p>At λ = 16 and μ = 20 the formula gives 16 ÷ (20 × 4) = 0.2 hours = 12 minutes, and the long run gives about 11.9. The "Average time in line" chart shows the formula as a dashed line. Try other values of λ: they match too.</p></details></li>
+            <li>At λ = 16 with random arrivals, try all four order options and click Long run after each. How does time in line change as the orders get more variable?
+              <details><summary>Show the answer</summary><p>About 6.0 minutes (every customer 3 cups), 6.5 (2 to 4 cups), 7.3 (1 to 5 cups), and 11.9 (exponential). The average order (3 cups) and μ never change; only the variability does.</p></details></li>
+            <li>Can a café keep its barista busy 100% of the time and still keep the line under control?
+              <details><summary>Show the answer</summary><p>No. That would need zero variability: every customer arriving exactly on schedule and every order exactly the same. Real service always has variability, and with λ = μ the line then grows without limit (try λ = 20 with Real life on the first tab and click Long run). That is why service capacity must exceed demand, and why a well-run service has some idle time.</p></details></li>
+          </ul>
+        </section>
+      </div>
+    </aside>
+  </main>
+
+  <section class="runs" aria-labelledby="runs-h">
+    <div class="runs-head">
+      <h2 id="runs-h">Compare long-run results</h2>
+      <button id="btn-clear" class="btn" type="button">Clear table</button>
+    </div>
+    <p>Each click on Long run adds a row. Every long run uses the same random numbers, so the differences between rows come from your changes, not from luck.</p>
+    <div class="table-wrap">
+      <table>
+        <caption class="sr-only">Long-run results for each setting you tried</caption>
+        <thead>
+          <tr>
+            <th scope="col">#</th><th scope="col" class="l">Tab</th><th scope="col">λ /hr</th><th scope="col">μ /hr</th><th scope="col">λ/μ</th>
+            <th scope="col" class="l">Arrivals</th><th scope="col" class="l">Orders</th><th scope="col" class="l">Line space</th>
+            <th scope="col">Busy</th><th scope="col">Time in line</th><th scope="col">At counter</th><th scope="col">In café</th><th scope="col">Served /hr</th><th scope="col">Walked away</th><th scope="col">In line at end</th>
+          </tr>
+        </thead>
+        <tbody id="runs"><tr class="empty"><td colspan="15">No runs yet. Click Long run to add the first row.</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="how">
+    <details>
+      <summary>How this simulation works</summary>
+      <ul>
+        <li>One barista and one line. Customers are served first come, first served.</li>
+        <li>Every order option averages 3 cups, and each cup takes the barista's time per cup (60 seconds unless you change it). So an average order takes 3 minutes and μ = 20 customers per hour, whatever the order option.</li>
+        <li>Orders "every customer 3 cups", "2 to 4 cups" and "1 to 5 cups": each cup takes exactly the barista's time per cup, so a customer's service time is the number of cups times that time.</li>
+        <li>Orders "Exponential": the number of cups is 1, 2, 3, … with each extra cup less likely (1 cup 33%, 2 cups 22%, 3 cups 15%, and so on), and each cup takes a random time that averages the barista's time per cup. Together this makes the service time exponential with a mean of 3 minutes, the assumption behind the M/M/1 formulas.</li>
+        <li>Random arrivals: the time between customers is exponential with mean 60/λ minutes (a Poisson process, as in the course slides). Steady arrivals: exactly one customer every 60/λ minutes.</li>
+        <li>Line space counts the people waiting, not the customer at the counter. When the line is full, a new customer walks away.</li>
+        <li>The two buttons under the picture add customers on top of the regular arrivals: 5 at once, or one customer with a 10-cup order.</li>
+        <li>"Replay this day" restarts from time zero with the same settings and the same customers. "New random day" restarts with the same settings and new random customers. "Reset" goes back to the current tab's starting settings and restarts.</li>
+        <li>Long run simulates 10,000 hours of business with the current settings and the same random numbers every time. When λ is not below μ, the line grows without limit; the long run still runs, so you can watch it explode.</li>
+      </ul>
+    </details>
+  </section>
+</div>
+
+<script>
+(() => {
+'use strict';
+window.addEventListener('error', (e) => {
+  const b = document.getElementById('boot-error');
+  if (b) { b.hidden = false; b.textContent = 'Something went wrong in the simulation: ' + (e.message || 'unknown error') + '. Try reloading the page.'; }
+});
+
+/* ===== ENGINE START ===== */
+// Single-barista café: first come, first served. Time unit = minutes.
+const MIXES = {
+  same:   { label: 'Every customer orders 3 cups', short: 'all 3 cups', cups: [3], probs: [1] },
+  narrow: { label: '2 to 4 cups, equally likely', short: '2–4 cups', cups: [2, 3, 4], probs: [1 / 3, 1 / 3, 1 / 3] },
+  mixed:  { label: '1 to 5 cups, equally likely', short: '1–5 cups', cups: [1, 2, 3, 4, 5], probs: [0.2, 0.2, 0.2, 0.2, 0.2] },
+  expo:   { label: 'Exponential, as in M/M/1 (1, 2, 3… cups; cup times vary)', short: 'exponential' }
+};
+const PATTERNS = {
+  steady: { label: 'Steady (deterministic): exactly one customer every 60/λ minutes', short: 'steady' },
+  random: { label: 'Random (Poisson): exponential time between customers, mean 60/λ minutes', short: 'random' }
+};
+const MEAN_CUPS = 3; // every order option averages 3 cups
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function muOf(p) { return 3600 / (MEAN_CUPS * p.secPerCup); } // customers per hour
+function isStable(p) {
+  if (p.cap !== Infinity) return true;
+  const mu = muOf(p);
+  if (p.lam < mu - 1e-9) return true;
+  return Math.abs(p.lam - mu) < 1e-9 && p.pattern === 'steady' && p.mix === 'same';
+}
+
+class Sim {
+  constructor(p, seed, opts) {
+    opts = opts || {};
+    this.p = Object.assign({}, p);
+    this.rA = mulberry32(seed * 7919 + 11);      // gaps between arrivals
+    this.rC = mulberry32(seed * 1299709 + 37);   // cups per customer
+    this.rS = mulberry32(seed * 49979687 + 53);  // cup times (exponential orders only)
+    this.rX = mulberry32(seed * 15485863 + 41);  // customers sent in by the buttons
+    this.track = !!opts.track;                   // live day: keep data for the animation and charts
+    this.record = this.track || !!opts.record;   // keep every customer's time in line
+    this.sampleEvery = opts.sampleEvery || 0;
+    this.nextSample = this.sampleEvery ? 0 : Infinity;
+    this.samples = [];
+    this.t = 0; this.lastT = 0;
+    this.queue = []; this.qHead = 0;
+    this.serving = null; this.endT = Infinity;
+    this.nextId = 1;
+    this.nextArr = this.gap();
+    this.arrived = 0; this.served = 0; this.balked = 0; this.waited = 0;
+    this.sumWq = 0; this.sumS = 0; this.sumSys = 0;
+    this.areaQ = 0; this.busy = 0; this.maxQ = 0;
+    this.hist = this.track ? [[0, 0]] : null;    // people in line, at each change
+    this.avgHist = this.track ? [[0, 0]] : null; // average time in line so far, at each departure
+    this.waits = this.record ? [] : null;
+    this.recent = [];
+    this.events = [];
+  }
+  qLen() { return this.queue.length - this.qHead; }
+  gap() {
+    const lam = this.p.lam;
+    if (this.p.pattern === 'steady') return this.t + 60 / lam;
+    return this.t - Math.log(1 - this.rA()) * 60 / lam;
+  }
+  drawCups(r) {
+    if (this.p.mix === 'expo') return 1 + Math.floor(Math.log(1 - r()) / Math.log(2 / 3));
+    const m = MIXES[this.p.mix]; const u = r(); let acc = 0;
+    for (let i = 0; i < m.cups.length; i++) { acc += m.probs[i]; if (u < acc) return m.cups[i]; }
+    return m.cups[m.cups.length - 1];
+  }
+  integrate(tn) {
+    while (this.nextSample <= tn) {
+      this.samples.push([this.nextSample, this.qLen(), this.served ? this.sumWq / this.served : 0]);
+      this.nextSample += this.sampleEvery;
+    }
+    const dt = tn - this.lastT;
+    if (dt > 0) {
+      this.areaQ += this.qLen() * dt;
+      if (this.serving) this.busy += dt;
+      this.lastT = tn;
+    }
+    this.t = tn;
+  }
+  advance(T) {
+    for (;;) {
+      const tn = Math.min(this.nextArr, this.endT);
+      if (tn > T) break;
+      this.integrate(tn);
+      if (this.endT <= this.nextArr) this.depart(); else this.arrivalEvent();
+    }
+    this.integrate(T);
+  }
+  arrivalEvent() {
+    this.admit(this.drawCups(this.rC), 0);
+    this.nextArr = this.gap();
+  }
+  addCustomers(n, cups) {
+    for (let i = 0; i < n; i++) this.admit(cups || this.drawCups(this.rX), i);
+  }
+  admit(cups, k) {
+    const c = { id: this.nextId++, cups, arr: this.t, start: null, end: null, k: k || 0, svc: 0, cupEnd: null };
+    this.arrived++;
+    if (!this.serving) { this.keep(c); this.ev('in', c); this.startService(c); }
+    else if (this.qLen() < this.p.cap) {
+      this.queue.push(c);
+      if (this.qLen() > this.maxQ) this.maxQ = this.qLen();
+      this.keep(c); this.ev('in', c); this.mark();
+    } else { this.balked++; this.ev('balk', c); }
+  }
+  keep(c) { if (this.track) { this.recent.push(c); if (this.recent.length > 12) this.recent.shift(); } }
+  startService(c) {
+    const per = this.p.secPerCup / 60;
+    c.start = this.t;
+    if (this.p.mix === 'expo') {
+      let acc = 0; c.cupEnd = new Array(c.cups);
+      for (let k = 0; k < c.cups; k++) { acc -= Math.log(1 - this.rS()) * per; c.cupEnd[k] = acc; }
+      c.svc = acc;
+    } else c.svc = c.cups * per;
+    this.serving = c; this.endT = this.t + c.svc;
+    this.ev('start', c);
+  }
+  depart() {
+    const c = this.serving; c.end = this.t;
+    this.served++;
+    const wq = c.start - c.arr;
+    this.sumWq += wq; this.sumS += c.end - c.start; this.sumSys += c.end - c.arr;
+    if (wq > 1e-9) this.waited++;
+    if (this.record) this.waits.push(wq);
+    if (this.track) { this.avgHist.push([this.t, this.sumWq / this.served]); if (this.avgHist.length > 30000) this.avgHist = thin(this.avgHist, false); }
+    this.serving = null; this.endT = Infinity;
+    this.ev('done', c);
+    if (this.qLen() > 0) {
+      const n = this.queue[this.qHead]; this.queue[this.qHead++] = undefined;
+      if (this.qHead > 4096 && this.qHead * 2 > this.queue.length) { this.queue = this.queue.slice(this.qHead); this.qHead = 0; }
+      this.mark();
+      this.startService(n);
+    }
+  }
+  ev(type, c) { if (this.track) this.events.push([type, c]); }
+  mark() {
+    if (!this.track) return;
+    this.hist.push([this.t, this.qLen()]);
+    if (this.hist.length > 40000) this.hist = thin(this.hist, true);
+  }
+  setParams(np) {
+    const arrivalsChanged = np.lam !== this.p.lam || np.pattern !== this.p.pattern;
+    this.p = Object.assign({}, np);
+    if (arrivalsChanged) this.nextArr = this.gap();
+  }
+  summary() {
+    const T = this.t, s = this.served || 1;
+    return {
+      hours: T / 60, arrived: this.arrived, served: this.served, balked: this.balked,
+      util: T > 0 ? this.busy / T : NaN,
+      wq: this.served ? this.sumWq / s : NaN, ws: this.served ? this.sumS / s : NaN,
+      w: this.served ? this.sumSys / s : NaN,
+      lq: T > 0 ? this.areaQ / T : 0, thru: T > 0 ? this.served / (T / 60) : 0,
+      walk: this.arrived ? this.balked / this.arrived : 0,
+      pctWaited: this.served ? this.waited / s : NaN, maxQ: this.maxQ, qNow: this.qLen()
+    };
+  }
+}
+function thin(h, keepPeaks) { // halve a long series, keeping its shape
+  const out = [h[0]];
+  for (let i = 1; i < h.length - 1; i += 2) out.push(keepPeaks && h[i + 1][1] > h[i][1] ? h[i + 1] : h[i]);
+  out.push(h[h.length - 1]);
+  return out;
+}
+function cupProgress(c, t) { // cups finished and the share of the current cup
+  const el = Math.max(0, t - c.start);
+  if (c.cupEnd) {
+    let k = 0; while (k < c.cups && c.cupEnd[k] <= el + 1e-12) k++;
+    if (k >= c.cups) return { made: c.cups, frac: 0 };
+    const prev = k ? c.cupEnd[k - 1] : 0;
+    return { made: k, frac: (el - prev) / (c.cupEnd[k] - prev) };
+  }
+  const per = c.svc / c.cups, made = Math.min(c.cups, Math.floor(el / per + 1e-9));
+  return { made, frac: made < c.cups ? (el - made * per) / per : 0 };
+}
+function longRun(p, hours, seed) {
+  const s = new Sim(p, seed, { record: true, sampleEvery: hours * 60 / 1000 });
+  s.advance(hours * 60);
+  const r = s.summary();
+  r.samples = s.samples; r.waits = s.waits;
+  return r;
+}
+/* ===== ENGINE END ===== */
+
+// ---------- helpers
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const fmt1 = (x) => (Math.round(x * 10) / 10).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const fmtRate = (x) => { const r = Math.round(x * 10) / 10; return Number.isInteger(r) ? String(r) : r.toFixed(1); };
+const pct = (x) => (isFinite(x) ? Math.round(x * 100) + '%' : '–');
+const mins = (x) => (isFinite(x) ? fmt1(x) + ' min' : '–');
+const int = (x) => Math.round(x).toLocaleString('en-US');
+const minsBig = (x) => (x >= 120 ? int(x) + ' min (about ' + (x >= 2880 ? int(x / 1440) + ' days' : fmt1(x / 60) + ' hours') + ')' : mins(x));
+function fmtNum(x) { return Math.abs(x - Math.round(x)) < 1e-6 ? int(x) : String(Math.round(x * 10) / 10); }
+function fmtDur(m) {
+  if (!(m >= 0)) return '–';
+  m = Math.floor(m);
+  if (m < 60) return m + ' min';
+  const h = Math.floor(m / 60), mm = m % 60;
+  if (h < 48) return h + ' h ' + String(mm).padStart(2, '0') + ' min';
+  return int(h) + ' h';
+}
+const capLabel = (c) => (c === Infinity ? 'No limit' : c + (c === 1 ? ' person' : ' people'));
+const keyOf = (p) => [p.lam, p.pattern, p.secPerCup, p.mix, p.cap].join('|');
+const reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+function mm1Wq(p) { // M/M/1 formula in minutes, shown only when the settings are exactly M/M/1
+  const mu = muOf(p);
+  if (p.pattern !== 'random' || p.mix !== 'expo' || p.cap !== Infinity || p.lam >= mu) return null;
+  return p.lam / (mu * (mu - p.lam)) * 60;
+}
+
+// ---------- state
+const SPEEDS = [1 / 12, 1 / 6, 1 / 4, 1 / 2, 1, 2, 5, 10, 30, 60];
+const SPEED_LABELS = ['5 seconds', '10 seconds', '15 seconds', '30 seconds', '1 minute', '2 minutes', '5 minutes', '10 minutes', '30 minutes', '1 hour'];
+const BASE = { lam: 16, pattern: 'random', secPerCup: 60, mix: 'mixed', cap: Infinity };
+const PRESETS = {
+  why:  { p: { lam: 20, pattern: 'steady', secPerCup: 60, mix: 'same', cap: Infinity }, speed: 4 },
+  util: { p: { lam: 10, pattern: 'random', secPerCup: 60, mix: 'mixed', cap: Infinity }, speed: 3 },
+  wait: { p: { lam: 10, pattern: 'random', secPerCup: 60, mix: 'mixed', cap: Infinity }, speed: 3 },
+  cut:  { p: Object.assign({}, BASE), speed: 3 }
+};
+const TAB_NAMES = { why: 'Why μ > λ', util: 'Utilization', wait: 'Waiting time', cut: 'Reduce waiting', play: 'Playground' };
+const LONG_SEED = 2026, LONG_HOURS = 10000;
+const S = { p: Object.assign({}, PRESETS.why.p), speedIdx: 4, seed: 1, playing: false, tab: 'why' };
+let sim = null;
+let lastLong = null;
+let runCount = 0;
+const people = new Map();
+let chartMode = 'queue', chartSrc = 'day', hoverX = null, chartHit = null;
+const speedNow = () => SPEEDS[S.speedIdx];
+
+// ---------- controls
+const CTRL = {
+  lam: (id) => `<div class="ctl"><div class="ctl-top"><label for="${id}">Arrival rate λ</label><output for="${id}" data-out="lam"></output></div>
+    <input type="range" id="${id}" data-param="lam" min="1" max="30" step="1"><p class="ctl-hint" data-out="lamHint"></p></div>`,
+  sec: (id) => `<div class="ctl"><div class="ctl-top"><label for="${id}">Barista speed: seconds per cup</label><output for="${id}" data-out="sec"></output></div>
+    <input type="range" id="${id}" data-param="secPerCup" min="20" max="120" step="5"><p class="ctl-hint" data-out="muHint"></p></div>`,
+  pattern: (id) => `<div class="ctl"><label for="${id}">Arrivals</label><select id="${id}" data-param="pattern">
+    <option value="steady">${PATTERNS.steady.label}</option><option value="random">${PATTERNS.random.label}</option></select>
+    <p class="ctl-hint">Both bring λ customers per hour on average.</p></div>`,
+  mix: (id) => `<div class="ctl"><label for="${id}">Orders (least to most variable)</label><select id="${id}" data-param="mix">
+    <option value="same">${MIXES.same.label}</option><option value="narrow">${MIXES.narrow.label}</option><option value="mixed">${MIXES.mixed.label}</option><option value="expo">${MIXES.expo.label}</option></select>
+    <p class="ctl-hint">All four average 3 cups per customer, so μ stays the same.</p></div>`,
+  cap: (id) => `<div class="ctl"><label for="${id}">Most people allowed to wait in line</label><select id="${id}" data-param="cap">
+    <option value="inf">No limit</option>${Array.from({ length: 15 }, (_, i) => `<option value="${i + 1}">${capLabel(i + 1)}</option>`).join('')}</select>
+    <p class="ctl-hint">A customer who finds the line full walks away.</p></div>`,
+  vary: (id) => `<fieldset class="ctl seg"><legend>Variability</legend>
+    <label><input type="radio" name="${id}" value="none" data-vary> None (only in theory): a customer every 60/λ minutes, every order 3 cups</label>
+    <label><input type="radio" name="${id}" value="real" data-vary> Real life: random (Poisson) arrivals, 1 to 5 cups</label></fieldset>`
+};
+function buildControls() {
+  let n = 0;
+  $$('[data-controls]').forEach((box) => {
+    const prefix = box.closest('[role="tabpanel"]').id.replace('panel-', '');
+    box.innerHTML = box.dataset.controls.split(' ').map((k) => CTRL[k](prefix + '-' + k + '-' + (n++))).join('');
+  });
+}
+function syncControls() {
+  const p = S.p;
+  $$('[data-param]').forEach((el) => {
+    const k = el.dataset.param;
+    let v = p[k];
+    if (k === 'cap') v = v === Infinity ? 'inf' : String(v);
+    if (document.activeElement !== el || el.type === 'range') el.value = v;
+  });
+  $$('[data-vary]').forEach((el) => {
+    el.checked = (el.value === 'none' && p.pattern === 'steady' && p.mix === 'same') ||
+                 (el.value === 'real' && p.pattern === 'random' && p.mix === 'mixed');
+  });
+  const mu = muOf(p), rho = p.lam / mu;
+  const outs = {
+    lam: p.lam + ' per hour',
+    lamHint: (p.pattern === 'steady' ? 'Exactly one customer every ' : 'On average one customer every ') + fmt1(60 / p.lam) + ' minutes.',
+    sec: p.secPerCup + ' s',
+    muHint: 'An average order is 3 cups × ' + p.secPerCup + ' s = ' + fmt1(3 * p.secPerCup / 60) + ' min, so μ = ' + fmtRate(mu) + ' customers per hour.',
+    rho: Math.round(rho * 100) + '%'
+  };
+  Object.keys(outs).forEach((k) => $$('[data-out="' + k + '"]').forEach((el) => { el.textContent = outs[k]; }));
+  $$('[data-out="rho"]').forEach((el) => el.classList.toggle('bad', !isStable(p)));
+  const chips = [
+    'λ = ' + p.lam + '/hr', 'μ = ' + fmtRate(mu) + '/hr', 'λ/μ = ' + Math.round(rho * 100) + '%',
+    PATTERNS[p.pattern].short + ' arrivals', MIXES[p.mix].short, 'line: ' + capLabel(p.cap).toLowerCase()
+  ];
+  const chipHtml = chips.map((c, i) => `<span class="chip${i === 2 && !isStable(p) ? ' bad' : ''}">${c}</span>`).join('');
+  $$('[data-out="chips"]').forEach((el) => { el.innerHTML = chipHtml; });
+  $('#speed').value = String(S.speedIdx);
+  $('#speed-out').textContent = '1 second = ' + SPEED_LABELS[S.speedIdx];
+}
+function setParam(k, raw) {
+  let v = raw;
+  if (k === 'lam' || k === 'secPerCup') v = Number(raw);
+  if (k === 'cap') v = raw === 'inf' ? Infinity : Number(raw);
+  if (S.p[k] === v) return;
+  S.p[k] = v;
+  sim.setParams(S.p);
+  syncControls(); updateLive();
+}
+function onControl(e) {
+  const el = e.target;
+  if (el.matches('[data-param]')) setParam(el.dataset.param, el.value);
+  else if (el.matches('[data-vary]') && el.checked) {
+    if (el.value === 'none') { S.p.pattern = 'steady'; S.p.mix = 'same'; }
+    else { S.p.pattern = 'random'; S.p.mix = 'mixed'; }
+    sim.setParams(S.p); syncControls(); updateLive();
+  } else if (el.id === 'speed') { S.speedIdx = Number(el.value); syncControls(); }
+}
+document.addEventListener('input', onControl);
+document.addEventListener('change', onControl);
+
+// ---------- tabs
+const TAB_KEYS = ['why', 'util', 'wait', 'cut', 'play'];
+function selectTab(key, opts) {
+  opts = opts || {};
+  S.tab = key;
+  TAB_KEYS.forEach((k) => {
+    const t = $('#tab-' + k), pnl = $('#panel-' + k), on = k === key;
+    t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1; pnl.hidden = !on;
+  });
+  if (PRESETS[key] && opts.load !== false) {
+    S.p = Object.assign({}, PRESETS[key].p); S.speedIdx = PRESETS[key].speed;
+    resetDay();
+  }
+  syncControls(); updateLive();
+  if (opts.focus) $('#tab-' + key).focus();
+  try { history.replaceState(null, '', '#' + key); } catch (err) { /* ignore */ }
+}
+$$('[role="tab"]').forEach((t) => {
+  t.addEventListener('click', () => selectTab(t.id.replace('tab-', '')));
+  t.addEventListener('keydown', (e) => {
+    const i = TAB_KEYS.indexOf(t.id.replace('tab-', ''));
+    let j = -1;
+    if (e.key === 'ArrowRight') j = (i + 1) % TAB_KEYS.length;
+    else if (e.key === 'ArrowLeft') j = (i + TAB_KEYS.length - 1) % TAB_KEYS.length;
+    else if (e.key === 'Home') j = 0; else if (e.key === 'End') j = TAB_KEYS.length - 1;
+    if (j >= 0) { e.preventDefault(); selectTab(TAB_KEYS[j], { focus: true }); }
+  });
+});
+document.addEventListener('click', (e) => {
+  const m = e.target.closest('[data-chart-mode]');
+  if (m) { chartMode = m.dataset.chartMode; syncChartButtons(); drawChart(); }
+  const s = e.target.closest('[data-chart-src]');
+  if (s && !s.disabled) { chartSrc = s.dataset.chartSrc; syncChartButtons(); drawChart(); }
+});
+
+// ---------- transport
+function setPlaying(on) { S.playing = on; $('#btn-play').textContent = on ? 'Pause' : 'Play'; }
+$('#btn-play').addEventListener('click', () => setPlaying(!S.playing));
+$('#btn-reset').addEventListener('click', () => resetDay());
+$('#btn-newday').addEventListener('click', () => { S.seed = 1 + Math.floor(Math.random() * 99999); resetDay(); });
+$('#btn-defaults').addEventListener('click', () => {
+  const pre = PRESETS[S.tab] || { p: BASE, speed: 3 };
+  S.p = Object.assign({}, pre.p); S.speedIdx = pre.speed; S.seed = 1;
+  resetDay(); syncControls(); updateLive();
+});
+$('#btn-class').addEventListener('click', () => { sim.addCustomers(5); });
+$('#btn-office').addEventListener('click', () => { sim.addCustomers(1, 10); });
+function resetDay() {
+  sim = new Sim(S.p, S.seed, { track: true });
+  people.clear(); hoverX = null;
+  chartSrc = 'day'; syncChartButtons();
+  updateLive();
+}
+
+// ---------- long run + table
+$('#btn-long').addEventListener('click', () => {
+  const btn = $('#btn-long'); btn.disabled = true; btn.textContent = 'Running…';
+  const p = Object.assign({}, S.p), tabAtClick = S.tab;
+  setTimeout(() => {
+    const r = longRun(p, LONG_HOURS, LONG_SEED);
+    const stable = isStable(p);
+    runCount++;
+    lastLong = { key: keyOf(p), p, r, stable, n: runCount, bins: null,
+                 qPts: r.samples.map((s) => [s[0], s[1]]), aPts: r.samples.map((s) => [s[0], s[2]]) };
+    addRow(runCount, p, r, stable, tabAtClick);
+    $('#long-result').innerHTML = (stable
+      ? `<b>Long run #${runCount}, 10,000 hours:</b> barista busy ${pct(r.util)} · time in line ${mins(r.wq)} · at the counter ${mins(r.ws)} · in the café ${mins(r.w)} · served ${fmt1(r.thru)} per hour` + (p.cap !== Infinity ? ` · walked away ${fmt1(r.walk * 100)}%` : '') + '.'
+      : `<span class="warn">Long run #${runCount}: unstable, the line keeps growing.</span> λ is not below μ, so the barista never catches up. Over 10,000 hours the barista is busy ${pct(r.util)} of the time, the average time in line is ${minsBig(r.wq)} and still rising, and ${int(r.qNow)} people are in line at the end.`) +
+      ' The chart now shows this long run.';
+    chartSrc = 'long'; syncChartButtons(); drawChart();
+    btn.disabled = false; btn.textContent = 'Long run: simulate 10,000 hours';
+    updateLive();
+  }, 20);
+});
+function addRow(n, p, r, stable, tab) {
+  const tb = $('#runs');
+  const empty = tb.querySelector('.empty'); if (empty) empty.remove();
+  const mu = muOf(p), grow = stable ? '' : '<span class="tag-bad">growing</span>';
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td class="key">${n}</td><td class="l">${TAB_NAMES[tab]}</td><td>${p.lam}</td><td>${fmtRate(mu)}</td><td>${Math.round(p.lam / mu * 100)}%</td>
+    <td class="l">${PATTERNS[p.pattern].short}</td><td class="l">${MIXES[p.mix].short}</td><td class="l">${capLabel(p.cap)}</td>
+    <td>${pct(r.util)}</td><td>${mins(r.wq)}${grow}</td><td>${mins(r.ws)}</td><td>${mins(r.w)}${grow}</td><td>${fmt1(r.thru)}</td><td>${fmt1(r.walk * 100)}%</td><td>${int(r.qNow)}</td>`;
+  tb.appendChild(tr);
+}
+$('#btn-clear').addEventListener('click', () => {
+  $('#runs').innerHTML = '<tr class="empty"><td colspan="15">No runs yet. Click Long run to add the first row.</td></tr>';
+  runCount = 0;
+});
+
+// ---------- live numbers
+function updateLive() {
+  if (!sim) return;
+  const s = sim.summary(), p = S.p, rho = p.lam / muOf(p);
+  $('#st-time').textContent = fmtDur(sim.t);
+  $('#st-time-s').textContent = 'clock: ' + clockText(sim.t);
+  $('#st-q').textContent = String(s.qNow);
+  $('#st-q-s').textContent = 'longest so far ' + s.maxQ;
+  $('#st-busy').textContent = sim.t > 1 ? pct(s.util) : '–';
+  $('#st-busy-s').textContent = 'λ/μ = ' + Math.round(rho * 100) + '%';
+  $('#st-wq').textContent = mins(s.wq);
+  $('#st-ws').textContent = mins(s.ws);
+  $('#st-w').textContent = mins(s.w);
+  $('#st-served').textContent = String(s.served);
+  $('#st-served-s').textContent = 'of ' + s.arrived + ' who came in';
+  $('#st-waited').textContent = pct(s.pctWaited);
+  $('#st-walk').textContent = String(s.balked);
+  const lk = lastLong && lastLong.key === keyOf(p) ? lastLong : null;
+  $$('[data-live="busy"]').forEach((el) => { el.textContent = sim.t > 1 ? pct(s.util) : '–'; });
+  $$('[data-live="qnow"]').forEach((el) => { el.textContent = String(s.qNow); });
+  $$('[data-long="util"]').forEach((el) => { el.textContent = lk ? pct(lk.r.util) : '–'; el.title = lk ? '' : 'Click Long run to fill this in'; });
+  if (!$('#panel-wait').hidden) { renderGantt(); renderWaitEq(s, lk); }
+  const c = sim.serving;
+  let st = '<b>' + s.qNow + '</b> in line · ';
+  if (c) {
+    const pr = cupProgress(c, sim.t);
+    st += 'barista making a <b>' + c.cups + '-cup</b> order (' + pr.made + ' of ' + c.cups + ' ready)';
+  } else st += 'barista <b>idle</b>, nobody to serve';
+  st += ' · ' + s.served + ' served';
+  if (p.cap !== Infinity || s.balked) st += ' · ' + s.balked + ' walked away';
+  $('#status').innerHTML = st;
+}
+function renderGantt() {
+  const box = $('#gantt');
+  const rows = sim.recent.slice(-8);
+  if (!rows.length) { box.innerHTML = '<p class="ctl-hint">The timeline fills in as customers arrive.</p>'; return; }
+  const t1 = sim.t, t0 = Math.min(...rows.map((c) => c.arr)), span = Math.max(t1 - t0, 1);
+  const X = (t) => (t - t0) / span * 100;
+  box.innerHTML = rows.map((c) => {
+    const lineEnd = c.start === null ? t1 : c.start;
+    const ctrEnd = c.start === null ? null : (c.end === null ? t1 : c.end);
+    let txt;
+    if (c.start === null) txt = 'in line ' + fmt1(t1 - c.arr) + ' min so far';
+    else if (c.end === null) txt = fmt1(c.start - c.arr) + ' in line + ' + fmt1(t1 - c.start) + ' at counter so far';
+    else txt = fmt1(c.start - c.arr) + ' + ' + fmt1(c.end - c.start) + ' = <b>' + fmt1(c.end - c.arr) + ' min</b>';
+    const hasLine = lineEnd - c.arr > 1e-9;
+    const segLine = hasLine ? `<span class="seg-line" style="left:${X(c.arr).toFixed(2)}%;width:${(X(lineEnd) - X(c.arr)).toFixed(2)}%"></span>` : '';
+    const segCtr = ctrEnd !== null ? `<span class="seg-counter" style="left:${X(c.start).toFixed(2)}%;width:${Math.max(0.5, X(ctrEnd) - X(c.start)).toFixed(2)}%"></span>` : '';
+    return `<div class="g-row"><span class="g-name">Customer ${c.id} · ${c.cups} ${c.cups === 1 ? 'cup' : 'cups'}</span><span class="g-txt">${txt}</span>
+      <div class="g-track" aria-hidden="true">${segLine}${segCtr}</div></div>`;
+  }).join('') + `<div class="g-axis"><span>${clockText(t0)}</span><span>now, ${clockText(t1)}</span></div>`;
+}
+function eqHtml(name, wq, ws, note) {
+  return `<div class="eq"><p class="eq-name">${name}</p><div class="eq-row">
+    <div class="eq-box"><span class="v">${fmt1(wq + ws)}</span><span class="k">min in the café</span></div><span class="eq-op">=</span>
+    <div class="eq-box line"><span class="v">${fmt1(wq)}</span><span class="k">min in line</span></div><span class="eq-op">+</span>
+    <div class="eq-box counter"><span class="v">${fmt1(ws)}</span><span class="k">min at the counter</span></div></div>${note || ''}</div>`;
+}
+function renderWaitEq(s, lk) {
+  let html = isFinite(s.w) ? eqHtml('Averages this day (' + s.served + ' customers served)', s.wq, s.ws)
+                           : '<p class="ctl-hint">The averages appear once the first customer has been served.</p>';
+  if (lk) html += eqHtml('Averages in the long run (#' + lk.n + ', 10,000 hours)', lk.r.wq, lk.r.ws, lk.stable ? '' : '<p class="note-bad">Unstable: time in line keeps growing.</p>');
+  else html += '<p class="ctl-hint">Click Long run to add the long-run averages for these settings.</p>';
+  $('#wait-eq').innerHTML = html;
+}
+function clockText(t) {
+  const tod = (7 * 60 + Math.floor(t)) % (24 * 60);
+  const h = Math.floor(tod / 60), m = tod % 60, h12 = ((h + 11) % 12) + 1;
+  return h12 + ':' + String(m).padStart(2, '0') + (h < 12 ? ' am' : ' pm');
+}
+
+// ---------- theme colors for the canvases
+const C = {};
+function readTheme() {
+  const cs = getComputedStyle(document.documentElement);
+  ['bg', 'surface', 'surface-2', 'ink', 'ink-2', 'muted', 'rule', 'accent', 'on-accent', 'gold', 'danger', 's-line', 's-counter', 'wall', 'wall-2', 'floor', 'floor-2', 'counter', 'counter-top', 'counter-ink', 'frame', 'coffee', 'board', 'board-ink', 'metal', 'scene-ink', 'pants', 'sky', 'tree']
+    .forEach((n) => { C[n.replace(/-(\w)/g, (_, a) => a.toUpperCase())] = cs.getPropertyValue('--' + n).trim(); });
+}
+try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { readTheme(); drawChart(); }); } catch (err) { /* older browsers */ }
+new MutationObserver(() => { readTheme(); drawChart(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+// ---------- scene geometry
+const scene = $('#scene'), g = scene.getContext('2d');
+let L = null, SC = 1, DPR = 1;
+function layoutScene() {
+  const cssW = scene.parentElement.clientWidth || 800;
+  SC = Math.max(0.6, Math.min(1.35, cssW / 780));
+  const W = cssW / SC, H = 380;
+  DPR = window.devicePixelRatio || 1;
+  scene.style.height = (H * SC) + 'px';
+  scene.width = Math.round(cssW * DPR); scene.height = Math.round(H * SC * DPR);
+  const cx0 = W - 226, cx1 = W - 82;
+  L = { W, H, wallY: 232, laneY: 338, row2Y: 288, row2S: 0.86, exitY: 368,
+        cx0, cx1, ctTop: 252, ctBot: 326, baristaX: cx0 + 52, baristaY: 270, machineX: cx1 - 34,
+        svcX: cx0 + 34, svcY: 352, qFront: cx0 - 36, sp: 48, qMinX: 100 };
+  L.n1 = Math.max(1, Math.floor((L.qFront - L.qMinX) / L.sp) + 1);
+}
+function slot(i) {
+  if (i < L.n1) return { x: L.qFront - i * L.sp, y: L.laneY, s: 1, vis: true };
+  if (i < 2 * L.n1) return { x: L.qMinX + (i - L.n1) * L.sp, y: L.row2Y, s: L.row2S, vis: true };
+  return { x: -60, y: L.laneY, s: 1, vis: false };
+}
+
+// ---------- people
+const SHIRTS = ['#e07a5f', '#3d85c6', '#81b29a', '#e9b44c', '#9b72cf', '#d9667b', '#4fb3bf', '#7d9d3a', '#c47a3a', '#6c7fd8'];
+const SKINS = ['#f1c27d', '#e0ac69', '#c68642', '#8d5524', '#ffdbac', '#a8714a'];
+const HAIR = ['#2b1b10', '#5a3825', '#1c1c1c', '#a0662d', '#d8b46a', '#3b2a20'];
+function consumeEvents() {
+  for (const [type, c] of sim.events) {
+    if (type === 'in' || type === 'balk') {
+      people.set(c.id, { c, x: -26 - c.k * 30, y: L.laneY + (type === 'balk' ? 14 : 0), s: 1, state: type === 'balk' ? 'balk' : 'queue',
+        phase: (c.id * 1.7) % 6.28, moving: false, hold: 0, back: false, vis: true });
+    } else if (type === 'start') {
+      const p = people.get(c.id); if (p) p.state = 'service';
+    } else if (type === 'done') {
+      const p = people.get(c.id); if (p) p.state = 'out';
+    }
+  }
+  sim.events.length = 0;
+}
+function movePeople(dt) {
+  const idx = new Map();
+  const nVis = 2 * L.n1;
+  for (let i = sim.qHead, j = 0; i < sim.queue.length && j < nVis; i++, j++) idx.set(sim.queue[i].id, j);
+  // walking across the café takes about 15 simulated seconds, so walkers keep pace with the clock
+  const v = reduceMotion ? 1e9 : Math.max(140, 4 * L.W * speedNow());
+  const balkX = sim.p.cap === Infinity ? 160 : Math.max(120, slot(Math.min(sim.p.cap, nVis)).x - 30);
+  for (const [id, p] of people) {
+    let tx, ty, ts = 1; p.vis = true;
+    if (p.state === 'queue') {
+      const j = idx.has(id) ? idx.get(id) : nVis;
+      const sl = slot(j); tx = sl.x; ty = sl.y; ts = sl.s; p.vis = sl.vis || p.x > 0;
+    } else if (p.state === 'service') { tx = L.svcX; ty = L.svcY; }
+    else if (p.state === 'out') { tx = L.W + 60; ty = L.exitY; ts = 1.04; }
+    else if (!p.back) { tx = balkX; ty = L.laneY + 14; }
+    else { tx = -70; ty = L.laneY + 14; }
+    const dx = tx - p.x, dy = ty - p.y, d = Math.hypot(dx, dy), step = v * dt;
+    if (d < 0.5 || (dt > 0 && d <= step)) { p.x = tx; p.y = ty; p.moving = false; }
+    else if (dt > 0) { p.x += dx / d * step; p.y += dy / d * step; p.moving = true; }
+    else p.moving = false;
+    p.s += (ts - p.s) * Math.min(1, dt * 8);
+    if (p.moving) p.phase += dt * 14;
+    if (p.state === 'balk' && !p.back && !p.moving && dt > 0) { p.hold += dt; if (p.hold > (reduceMotion ? 0 : 0.9)) p.back = true; }
+    if ((p.state === 'out' && p.x >= L.W + 50) || (p.state === 'balk' && p.back && p.x <= -60)) people.delete(id);
+  }
+}
+
+// ---------- drawing the café
+function rr(x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+function font(w, px, fam) { g.font = w + ' ' + px + 'px ' + (fam === 'mono' ? '"IBM Plex Mono", ui-monospace, Menlo, monospace' : fam === 'disp' ? 'Archivo, "Arial Narrow", sans-serif' : '"Atkinson Hyperlegible", system-ui, sans-serif'); }
+function pill(x, y, text, bg, fg, size) {
+  font('700', size || 11, 'body');
+  const w = g.measureText(text).width + 12, h = (size || 11) + 8;
+  g.fillStyle = bg; rr(x - w / 2, y - h / 2, w, h, h / 2); g.fill();
+  g.fillStyle = fg; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, x, y + 0.5);
+}
+function cup(x, y, made, frac) { // x,y = top-left of a 7x9 paper cup
+  g.beginPath(); g.moveTo(x, y); g.lineTo(x + 7, y); g.lineTo(x + 5.9, y + 9); g.lineTo(x + 1.1, y + 9); g.closePath();
+  if (made) {
+    g.fillStyle = '#fbf8f2'; g.fill();
+    g.fillStyle = '#9a6438'; g.fillRect(x + 0.9, y + 3.2, 5.2, 2.8);
+    g.fillStyle = '#3a2a20'; g.fillRect(x - 0.6, y - 1.8, 8.2, 2.2);
+    g.strokeStyle = 'rgba(40,30,25,.55)'; g.lineWidth = 0.8; g.stroke();
+  } else {
+    g.save(); g.setLineDash([1.6, 1.4]); g.strokeStyle = C.sceneInk; g.globalAlpha = 0.8; g.lineWidth = 1; g.stroke(); g.restore();
+    if (frac > 0) { g.save(); g.clip(); g.fillStyle = C.coffee; g.fillRect(x, y + 9 * (1 - frac), 7, 9 * frac); g.restore(); }
+  }
+}
+function drawCups(x, topY, n, made, frac) {
+  const per = 5, cw = 7, gap = 2.2, shown = Math.min(n, 15);
+  for (let i = 0; i < shown; i++) {
+    const row = Math.floor(i / per), col = i % per, inRow = Math.min(per, shown - row * per);
+    const x0 = x - (inRow * (cw + gap) - gap) / 2 + col * (cw + gap);
+    const y0 = topY - (row + 1) * 12.5 + 2;
+    cup(x0, y0, i < made, i === made ? frac : 0);
+  }
+  if (n > shown) { font('700', 10, 'mono'); g.fillStyle = C.sceneInk; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText('+' + (n - shown), x + 26, topY - 3 * 12.5 + 6); }
+}
+function face(mood) {
+  g.fillStyle = '#1d1712';
+  g.beginPath(); g.arc(-3, -45, 1.1, 0, 7); g.arc(3, -45, 1.1, 0, 7); g.fill();
+  g.strokeStyle = '#1d1712'; g.lineWidth = 1.2; g.beginPath();
+  if (mood === 0) g.arc(0, -42.5, 3, 0.15 * Math.PI, 0.85 * Math.PI);
+  else if (mood === 1) { g.moveTo(-2.6, -40.5); g.lineTo(2.6, -40.5); }
+  else g.arc(0, -38, 3, 1.18 * Math.PI, 1.82 * Math.PI);
+  g.stroke();
+}
+function person(p) {
+  const c = p.c;
+  let mood = 0, made = 0, frac = 0, label = null;
+  const moodOf = (w) => (w < 2 ? 0 : w < 6 ? 1 : 2);
+  if (p.state === 'queue') {
+    const w = sim.t - c.arr; mood = moodOf(w);
+    if (p.vis && !p.moving && p.y > L.row2Y + 10) label = Math.floor(w) + ' min';
+  } else if (p.state === 'service') {
+    mood = moodOf(c.start - c.arr);
+    const pr = cupProgress(c, sim.t); made = pr.made; frac = pr.frac;
+    label = 'cup ' + Math.min(c.cups, made + 1) + ' of ' + c.cups;
+  } else if (p.state === 'out') { mood = moodOf(c.start - c.arr); made = c.cups; }
+  else mood = 2;
+  g.save(); g.translate(p.x, p.y); g.scale(p.s, p.s);
+  g.fillStyle = 'rgba(0,0,0,.14)'; g.beginPath(); g.ellipse(0, 0, 11, 3, 0, 0, 7); g.fill();
+  const sw = p.moving && !reduceMotion ? Math.sin(p.phase) * 3.5 : 0;
+  g.strokeStyle = C.pants; g.lineWidth = 4.2; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(-4, -14); g.lineTo(-4 + sw, -1.5); g.moveTo(4, -14); g.lineTo(4 - sw, -1.5); g.stroke();
+  g.fillStyle = SHIRTS[c.id % SHIRTS.length]; rr(-10, -35, 20, 23, 7); g.fill();
+  g.fillStyle = SKINS[(c.id * 7) % SKINS.length]; g.beginPath(); g.arc(0, -44, 8.5, 0, 7); g.fill();
+  g.fillStyle = HAIR[(c.id * 3) % HAIR.length]; g.beginPath(); g.arc(0, -46, 8.7, Math.PI * 1.05, Math.PI * 1.95); g.fill();
+  face(mood);
+  drawCups(0, -56, c.cups, made, frac);
+  if (p.state === 'balk' && !p.back) {
+    font('700', 11, 'body');
+    const t = "Line's full!", w = g.measureText(t).width + 12, top = -56 - Math.min(3, Math.ceil(c.cups / 5)) * 12.5 - 22;
+    g.fillStyle = C.surface; rr(-w / 2, top, w, 18, 6); g.fill(); g.strokeStyle = C.danger; g.lineWidth = 1.4; g.stroke();
+    g.fillStyle = C.danger; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(t, 0, top + 9.5);
+  }
+  if (label) {
+    font('600', 10, 'mono'); g.textAlign = 'center'; g.textBaseline = 'top';
+    g.fillStyle = C.sceneInk; g.globalAlpha = 0.85; g.fillText(label, 0, 4); g.globalAlpha = 1;
+  }
+  g.restore();
+}
+function barista(time) {
+  const x = L.baristaX, y = L.baristaY, busy = !!sim.serving;
+  g.save(); g.translate(x, y); g.scale(1.15, 1.15);
+  g.fillStyle = '#f7f3ea'; rr(-10, -35, 20, 26, 7); g.fill();
+  g.fillStyle = C.accent; rr(-8, -30, 16, 24, 4); g.fill();
+  g.fillStyle = '#c68642'; g.beginPath(); g.arc(0, -44, 8.5, 0, 7); g.fill();
+  g.fillStyle = C.accent; rr(-9.5, -55, 19, 6, 3); g.fill();
+  g.fillRect(-1, -52, 13, 3);
+  face(busy ? 0 : 1);
+  g.strokeStyle = '#c68642'; g.lineWidth = 3.4; g.lineCap = 'round';
+  const a = busy && !reduceMotion ? Math.sin(time * 9) * 2.5 : 0;
+  g.beginPath();
+  if (busy) { g.moveTo(8, -30); g.lineTo(22, -27 + a); g.moveTo(-8, -30); g.lineTo(-14, -20); }
+  else { g.moveTo(8, -30); g.lineTo(11, -17); g.moveTo(-8, -30); g.lineTo(-11, -17); }
+  g.stroke();
+  g.restore();
+}
+function machine(time) {
+  const mx = L.machineX, top = L.ctTop, busy = !!sim.serving;
+  g.fillStyle = C.metal; rr(mx - 24, top - 50, 48, 50, 5); g.fill();
+  g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(mx - 20, top - 46, 40, 8);
+  g.fillStyle = '#222'; g.fillRect(mx - 7, top - 30, 14, 6);
+  g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(mx - 18, top - 6, 36, 4);
+  if (busy) {
+    g.fillStyle = '#fbf8f2'; g.fillRect(mx - 4, top - 14, 8, 8);
+    if (!reduceMotion) {
+      g.strokeStyle = C.sceneInk; g.globalAlpha = 0.35; g.lineWidth = 1.5;
+      for (let k = 0; k < 3; k++) {
+        g.beginPath();
+        for (let s = 0; s <= 18; s += 2) { const yy = top - 54 - s; const xx = mx - 10 + k * 10 + Math.sin(time * 4 + s * 0.35 + k) * 2.5; if (s === 0) g.moveTo(xx, yy); else g.lineTo(xx, yy); }
+        g.stroke();
+      }
+      g.globalAlpha = 1;
+    }
+  }
+}
+function drawScene(time) {
+  const { W, H } = L;
+  g.setTransform(DPR * SC, 0, 0, DPR * SC, 0, 0);
+  g.fillStyle = C.wall; g.fillRect(0, 0, W, L.wallY);
+  g.fillStyle = C.wall2; g.fillRect(0, L.wallY - 34, W, 34);
+  g.fillStyle = C.floor; g.fillRect(0, L.wallY, W, H - L.wallY);
+  g.fillStyle = C.floor2; for (let y = L.wallY + 18; y < H; y += 26) g.fillRect(0, y, W, 2);
+  g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+  font('800', 30, 'disp'); g.fillStyle = C.accent; g.fillText('CAMPUS CAFÉ', 84, 58);
+  font('400', 12.5, 'body'); g.fillStyle = C.sceneInk; g.fillText('One barista · first come, first served', 85, 78);
+  const wx0 = 104, wx1 = L.cx0 - 130;   // window onto campus
+  if (wx1 - wx0 > 150) {
+    g.fillStyle = C.wall2; rr(wx0 - 6, 98, wx1 - wx0 + 12, 108, 4); g.fill();
+    g.fillStyle = C.sky; g.fillRect(wx0, 104, wx1 - wx0, 96);
+    g.fillStyle = C.tree;
+    for (let tx = wx0 + 26; tx < wx1 - 10; tx += 62) { g.fillRect(tx - 2, 176, 4, 24); g.beginPath(); g.arc(tx, 166, 15, 0, 7); g.arc(tx - 10, 174, 10, 0, 7); g.arc(tx + 10, 174, 10, 0, 7); g.fill(); }
+    g.fillStyle = C.wall2; g.fillRect((wx0 + wx1) / 2 - 3, 104, 6, 96);
+  }
+  const ckX = L.cx0 - 70;               // wall clock
+  if (ckX - 34 > 84 + 260) {
+    const tod = 7 * 60 + sim.t;
+    g.fillStyle = C.surface; g.beginPath(); g.arc(ckX, 82, 28, 0, 7); g.fill(); g.strokeStyle = C.sceneInk; g.lineWidth = 2; g.stroke();
+    for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2; g.beginPath(); g.moveTo(ckX + Math.sin(a) * 23, 82 - Math.cos(a) * 23); g.lineTo(ckX + Math.sin(a) * 26, 82 - Math.cos(a) * 26); g.stroke(); }
+    const am = (tod % 60) / 60 * Math.PI * 2, ah = ((tod / 60) % 12) / 12 * Math.PI * 2;
+    g.lineCap = 'round'; g.lineWidth = 3; g.beginPath(); g.moveTo(ckX, 82); g.lineTo(ckX + Math.sin(ah) * 13, 82 - Math.cos(ah) * 13); g.stroke();
+    g.lineWidth = 2; g.beginPath(); g.moveTo(ckX, 82); g.lineTo(ckX + Math.sin(am) * 20, 82 - Math.cos(am) * 20); g.stroke();
+    font('600', 11, 'mono'); g.fillStyle = C.sceneInk; g.textAlign = 'center'; g.fillText(clockText(sim.t), ckX, 126);
+  }
+  const bx = L.cx0 + 4, bw = L.cx1 - L.cx0 - 8;   // menu board over the counter
+  g.fillStyle = C.frame; rr(bx - 4, 30, bw + 8, 128, 6); g.fill();
+  g.fillStyle = C.board; rr(bx, 34, bw, 120, 4); g.fill();
+  g.fillStyle = C.gold; font('800', 15, 'disp'); g.textAlign = 'center'; g.fillText('MENU', bx + bw / 2, 56);
+  g.fillStyle = C.boardInk; font('400', 12, 'body');
+  g.fillText('Coffee, any size', bx + bw / 2, 78);
+  g.fillText((sim.p.mix === 'expo' ? 'Each cup: about ' : 'Each cup: ') + sim.p.secPerCup + ' s', bx + bw / 2, 98);
+  g.fillText('Avg order: 3 cups', bx + bw / 2, 116);
+  font('600', 12, 'mono'); g.fillStyle = C.gold; g.fillText('μ = ' + fmtRate(muOf(sim.p)) + ' / hr', bx + bw / 2, 140);
+  g.fillStyle = C.wall2; g.fillRect(12, 112, 56, L.wallY - 112); g.fillStyle = C.floor2; g.fillRect(0, L.laneY - 12, 74, 26);
+  g.fillStyle = C.surface; rr(8, 116, 70, 36, 4); g.fill();
+  font('800', 12, 'disp'); g.fillStyle = C.accent; g.textAlign = 'center'; g.fillText('IN', 43, 130);
+  font('600', 10, 'mono'); g.fillStyle = C.sceneInk; g.fillText('λ = ' + sim.p.lam + '/hr', 43, 145);
+  const exX = L.W - 40;
+  g.fillStyle = '#1f8a4c'; rr(exX - 24, 170, 48, 20, 3); g.fill();
+  font('800', 12, 'disp'); g.fillStyle = '#ffffff'; g.fillText('EXIT ›', exX, 184);
+  if (sim.p.cap !== Infinity) {          // waiting-space limit
+    const cap = sim.p.cap, full = sim.qLen() >= cap;
+    for (let i = 0; i < Math.min(cap, 2 * L.n1); i++) { const s = slot(i); g.fillStyle = 'rgba(255,255,255,.22)'; g.beginPath(); g.ellipse(s.x, s.y + 1, 15 * s.s, 4 * s.s, 0, 0, 7); g.fill(); }
+    if (cap < 2 * L.n1) {
+      const s = slot(cap), px = s.x + (cap < L.n1 ? L.sp / 2 : -L.sp / 2);
+      g.fillStyle = C.metal; g.fillRect(px - 2, s.y - 34 * s.s, 4, 34 * s.s); g.beginPath(); g.ellipse(px, s.y, 7, 2.5, 0, 0, 7); g.fill();
+      pill(px, s.y - 46 * s.s, full ? 'Line full' : 'Max ' + cap + ' in line', full ? C.danger : C.surface, full ? C.onAccent : C.sceneInk, 10.5);
+    }
+  }
+  // people behind the counter line, then barista and counter, then the rest
+  const list = Array.from(people.values()).filter((p) => p.vis !== false && p.x > -40 && p.x < L.W + 40).sort((a, b) => a.y - b.y || a.x - b.x);
+  let i = 0;
+  for (; i < list.length && list[i].y < 300; i++) person(list[i]);
+  barista(time); machine(time);
+  g.fillStyle = C.counterTop; rr(L.cx0 - 8, L.ctTop, L.cx1 - L.cx0 + 16, 11, 3); g.fill();
+  g.fillStyle = C.counter; g.fillRect(L.cx0, L.ctTop + 11, L.cx1 - L.cx0, L.ctBot - L.ctTop - 11);
+  font('700', 11, 'disp'); g.fillStyle = C.counterInk; g.globalAlpha = 0.8; g.textAlign = 'center'; g.fillText('ORDER HERE', L.cx0 + (L.cx1 - L.cx0) * 0.68, L.ctTop + 40); g.globalAlpha = 1;
+  pill(L.baristaX, L.baristaY - 80, sim.serving ? 'Busy' : 'Idle', sim.serving ? C.accent : C.surface, sim.serving ? C.onAccent : C.sceneInk, 11);
+  for (; i < list.length; i++) person(list[i]);
+  const outside = sim.qLen() - 2 * L.n1;
+  if (outside > 0) pill(52, L.laneY - 96, '+' + int(outside) + ' outside', C.danger, C.onAccent, 11);
+}
+
+// ---------- chart
+const chart = $('#chart'), cg = chart.getContext('2d'), tip = $('#chart-tip');
+function syncChartButtons() {
+  $$('[data-chart-mode]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.chartMode === chartMode)));
+  const longBtn = $('[data-chart-src="long"]');
+  longBtn.disabled = !lastLong; longBtn.title = lastLong ? 'Long run #' + lastLong.n : 'Click Long run first';
+  longBtn.textContent = lastLong ? 'Long run #' + lastLong.n : 'Long run';
+  if (!lastLong && chartSrc === 'long') chartSrc = 'day';
+  $$('[data-chart-src]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.chartSrc === chartSrc)));
+}
+function niceStep(range, n) {
+  const raw = range / n, p = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / p;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p;
+}
+function timeStep(T) {
+  if (T > 2880) return niceStep(T / 60, 5) * 60;
+  const opts = [5, 10, 15, 30, 60, 120, 180, 240, 360, 480, 720, 1440];
+  for (const s of opts) if (T / s <= 6) return s;
+  return 1440;
+}
+function tLabel(m) {
+  if (m === 0) return '0';
+  if (m >= 2880) return int(m / 60) + ' h';
+  return m < 60 ? Math.round(m) + ' min' : (m % 60 === 0 ? m / 60 + ' h' : (m / 60).toFixed(1) + ' h');
+}
+function valAt(pts, t) {
+  let lo = 0, hi = pts.length - 1;
+  while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (pts[mid][0] <= t) lo = mid; else hi = mid - 1; }
+  return pts[lo][1];
+}
+function histBins(waits) {
+  const n = waits ? waits.length : 0; if (!n) return null;
+  let zero = 0; const pos = [];
+  for (const w of waits) if (w < 1e-9) zero++; else pos.push(w);
+  const sorted = Float64Array.from(pos).sort();
+  const hi = sorted.length ? sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.99))] : 0;
+  const bw = hi > 0 ? niceStep(hi, 8) : 1, nb = Math.max(1, Math.ceil(hi / bw) || 1);
+  const counts = new Array(nb).fill(0);
+  for (const w of sorted) counts[Math.min(nb - 1, Math.floor(w / bw))]++;
+  return { n, zero, bw, nb, counts };
+}
+function chartSetup() {
+  const w = chart.parentElement.clientWidth || 600, h = 180, dpr = window.devicePixelRatio || 1;
+  if (chart.width !== Math.round(w * dpr) || chart.height !== Math.round(h * dpr)) { chart.width = Math.round(w * dpr); chart.height = Math.round(h * dpr); }
+  cg.setTransform(dpr, 0, 0, dpr, 0, 0); cg.clearRect(0, 0, w, h);
+  cg.font = '11px "IBM Plex Mono", ui-monospace, Menlo, monospace';
+  return { w, h, pad: { l: 46, r: 14, t: 14, b: 24 } };
+}
+function drawChart() {
+  if (!sim || !C.ink) return;
+  const fromLong = chartSrc === 'long' && lastLong;
+  const p = fromLong ? lastLong.p : S.p;
+  const setting = 'λ = ' + p.lam + ', μ = ' + fmtRate(muOf(p)) + ', ' + PATTERNS[p.pattern].short + ' arrivals, ' + MIXES[p.mix].short + (p.cap !== Infinity ? ', line limit ' + p.cap : '');
+  const src = fromLong ? `long run #${lastLong.n}, 10,000 hours: ${setting}` : 'this day';
+  const cap = $('#chart-cap');
+  if (chartMode === 'dist') {
+    const bins = fromLong ? (lastLong.bins || (lastLong.bins = histBins(lastLong.r.waits))) : histBins(sim.waits);
+    const avg = fromLong ? lastLong.r.wq : (sim.served ? sim.sumWq / sim.served : NaN);
+    cap.innerHTML = `Time in line: share of customers <span>(${bins ? int(bins.n) : 0} customers served, ${src})</span>`;
+    drawDist(bins, avg);
+  } else if (chartMode === 'queue') {
+    cap.innerHTML = `People waiting in line <span>(not counting the customer at the counter; ${src})</span>`;
+    drawTime(fromLong ? lastLong.qPts : sim.hist, fromLong ? LONG_HOURS * 60 : sim.t, 'max', null, 'people');
+  } else {
+    cap.innerHTML = `Average time in line so far, in minutes <span>(customers served up to each moment; ${src})</span>`;
+    drawTime(fromLong ? lastLong.aPts : sim.avgHist, fromLong ? LONG_HOURS * 60 : sim.t, 'last', mm1Wq(p), 'min');
+  }
+}
+function drawTime(pts, Tend, agg, ref, unit) {
+  const { w, h, pad } = chartSetup(), pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
+  const T = Math.max(Tend, 60);
+  let ymax = 0; for (const pt of pts) if (pt[1] > ymax) ymax = pt[1];
+  if (ref) ymax = Math.max(ymax, ref * 1.15);
+  const floor = unit === 'min' ? 2 : 4;
+  const ys = niceStep(Math.max(ymax, floor), 4), ytop = Math.max(ys * Math.ceil(Math.max(ymax, floor) / ys), ys);
+  const X = (t) => pad.l + t / T * pw, Y = (v) => pad.t + ph - v / ytop * ph;
+  cg.strokeStyle = C.rule; cg.lineWidth = 1; cg.fillStyle = C.muted; cg.textAlign = 'right'; cg.textBaseline = 'middle';
+  for (let k = 0; k * ys <= ytop + 1e-9; k++) { const v = k * ys, y = Math.round(Y(v)) + 0.5; cg.beginPath(); cg.moveTo(pad.l, y); cg.lineTo(w - pad.r, y); cg.stroke(); cg.fillText(fmtNum(v), pad.l - 6, y); }
+  const ts = timeStep(T); cg.textAlign = 'center'; cg.textBaseline = 'top';
+  for (let k = 0; k * ts <= T + 1e-9; k++) { const t = k * ts, x = X(t); if (x > w - pad.r - 18 && t > 0) break; cg.fillText(tLabel(t), x, h - pad.b + 6); }
+  const cols = Math.max(1, Math.floor(pw)), val = new Float64Array(cols + 1).fill(NaN);
+  for (let i = 0; i < pts.length; i++) {
+    const t0 = pts[i][0], t1 = i + 1 < pts.length ? pts[i + 1][0] : Tend, v = pts[i][1];
+    const c0 = Math.max(0, Math.floor(t0 / T * cols)), c1 = Math.min(cols, Math.floor(Math.min(t1, Tend) / T * cols));
+    for (let c = c0; c <= c1; c++) val[c] = agg === 'max' ? (isNaN(val[c]) ? v : Math.max(val[c], v)) : v;
+  }
+  let last = 0; for (let c = 0; c <= cols; c++) if (!isNaN(val[c])) last = c;
+  const color = unit === 'min' ? C.sLine : C.accent;
+  if (unit !== 'min') {
+    cg.beginPath(); cg.moveTo(pad.l, Y(0));
+    for (let c = 0; c <= last; c++) cg.lineTo(pad.l + c, Y(isNaN(val[c]) ? 0 : val[c]));
+    cg.lineTo(pad.l + last, Y(0)); cg.closePath();
+    cg.fillStyle = color; cg.globalAlpha = 0.16; cg.fill(); cg.globalAlpha = 1;
+  }
+  cg.beginPath();
+  for (let c = 0; c <= last; c++) { const y = Y(isNaN(val[c]) ? 0 : val[c]); if (c === 0) cg.moveTo(pad.l, y); else cg.lineTo(pad.l + c, y); }
+  cg.strokeStyle = color; cg.lineWidth = 2; cg.lineJoin = 'round'; cg.stroke();
+  const endV = pts.length ? pts[pts.length - 1][1] : 0;
+  cg.fillStyle = color; cg.beginPath(); cg.arc(pad.l + last, Y(endV), 4, 0, 7); cg.fill(); cg.strokeStyle = C.surface; cg.lineWidth = 2; cg.stroke();
+  if (ref) {
+    const y = Math.round(Y(ref)) + 0.5;
+    cg.strokeStyle = C.ink2; cg.lineWidth = 1.2; cg.setLineDash([5, 4]); cg.beginPath(); cg.moveTo(pad.l, y); cg.lineTo(w - pad.r, y); cg.stroke(); cg.setLineDash([]);
+    cg.fillStyle = C.ink2; cg.textAlign = 'right'; cg.textBaseline = 'bottom'; cg.fillText('M/M/1 formula: ' + fmt1(ref) + ' min', w - pad.r, y - 3);
+  }
+  chartHit = { kind: 'time' };
+  if (hoverX !== null && hoverX >= pad.l && hoverX <= pad.l + last && pts.length) {
+    const t = (hoverX - pad.l) / pw * T, v = valAt(pts, t);
+    cg.strokeStyle = C.ink2; cg.lineWidth = 1; cg.setLineDash([3, 3]); cg.beginPath(); cg.moveTo(hoverX + 0.5, pad.t); cg.lineTo(hoverX + 0.5, pad.t + ph); cg.stroke(); cg.setLineDash([]);
+    cg.fillStyle = C.ink; cg.beginPath(); cg.arc(hoverX, Y(v), 3.5, 0, 7); cg.fill();
+    showTip(hoverX, Y(v), fmtDur(t) + ': ' + (unit === 'min' ? 'average ' + fmt1(v) + ' min' : int(v) + ' waiting'));
+  } else tip.hidden = true;
+}
+function drawDist(b, avg) {
+  const { w, h, pad } = chartSetup(), pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
+  if (!b) {
+    cg.fillStyle = C.muted; cg.textAlign = 'center'; cg.textBaseline = 'middle'; cg.fillText('No customers served yet.', w / 2, h / 2);
+    chartHit = null; tip.hidden = true; return;
+  }
+  const shares = [b.zero / b.n].concat(b.counts.map((c) => c / b.n));
+  const ymax = Math.max(...shares) * 100, ys = niceStep(Math.max(ymax, 5), 4), ytop = ys * Math.ceil(Math.max(ymax, 5) / ys);
+  const Y = (s) => pad.t + ph - s * 100 / ytop * ph;
+  cg.strokeStyle = C.rule; cg.lineWidth = 1; cg.fillStyle = C.muted; cg.textAlign = 'right'; cg.textBaseline = 'middle';
+  for (let k = 0; k * ys <= ytop + 1e-9; k++) { const v = k * ys, y = Math.round(pad.t + ph - v / ytop * ph) + 0.5; cg.beginPath(); cg.moveTo(pad.l, y); cg.lineTo(w - pad.r, y); cg.stroke(); cg.fillText(fmtNum(v) + '%', pad.l - 6, y); }
+  const slotW = pw / (b.nb + 1.6), x0 = pad.l + slotW * 1.6;     // the "no wait" bar, a gap, then the bins
+  const bars = [{ x: pad.l + slotW * 0.1, wd: slotW * 0.8, s: shares[0], label: 'No wait', col: C.muted }];
+  for (let k = 0; k < b.nb; k++) {
+    const lo = k * b.bw, hi = (k + 1) * b.bw;
+    const label = k === b.nb - 1 && b.nb > 1 ? fmtNum(lo) + ' min or more' : 'More than ' + fmtNum(lo) + ', up to ' + fmtNum(hi) + ' min';
+    bars.push({ x: x0 + k * slotW + 1, wd: Math.max(1, slotW - 2), s: shares[k + 1], label, col: C.sLine });
+  }
+  bars.forEach((bar) => { if (bar.s > 0) { cg.fillStyle = bar.col; const y = Y(bar.s), hh = pad.t + ph - y; rrc(bar.x, y, bar.wd, hh, Math.min(4, bar.wd / 2, hh)); cg.fill(); } });
+  cg.fillStyle = C.muted; cg.textAlign = 'center'; cg.textBaseline = 'top';
+  cg.fillText('no wait', pad.l + slotW * 0.5, h - pad.b + 6);
+  const every = Math.max(1, Math.ceil(b.nb / 7));
+  for (let k = 0; k <= b.nb; k += every) { const x = x0 + k * slotW; if (x > w - pad.r - 10) break; cg.fillText(fmtNum(k * b.bw), x, h - pad.b + 6); }
+  cg.textAlign = 'right'; cg.fillText('min', w - pad.r, h - pad.b + 6);
+  if (isFinite(avg) && avg > 0) {
+    const xa = x0 + Math.min(avg / b.bw, b.nb) * slotW;
+    cg.strokeStyle = C.ink2; cg.lineWidth = 1.2; cg.setLineDash([5, 4]); cg.beginPath(); cg.moveTo(xa + 0.5, pad.t); cg.lineTo(xa + 0.5, pad.t + ph); cg.stroke(); cg.setLineDash([]);
+    cg.fillStyle = C.ink2; cg.textBaseline = 'top'; cg.textAlign = xa > w - 150 ? 'right' : 'left';
+    cg.fillText('average ' + fmt1(avg) + ' min', xa + (xa > w - 150 ? -5 : 5), pad.t);
+  }
+  chartHit = { kind: 'dist' };
+  if (hoverX !== null) {
+    const bar = bars.find((r) => hoverX >= r.x - 1 && hoverX <= r.x + r.wd + 1);
+    if (bar) showTip(bar.x + bar.wd / 2, Y(bar.s), bar.label + ': ' + (bar.s * 100).toFixed(bar.s < 0.1 ? 1 : 0) + '% of customers');
+    else tip.hidden = true;
+  } else tip.hidden = true;
+}
+function rrc(x, y, w, h, r) { cg.beginPath(); cg.moveTo(x, y + h); cg.lineTo(x, y + r); cg.arcTo(x, y, x + r, y, r); cg.lineTo(x + w - r, y); cg.arcTo(x + w, y, x + w, y + r, r); cg.lineTo(x + w, y + h); cg.closePath(); }
+function showTip(x, y, text) { tip.hidden = false; tip.style.left = x + 'px'; tip.style.top = Math.max(18, y) + 'px'; tip.textContent = text; }
+chart.addEventListener('pointermove', (e) => { const r = chart.getBoundingClientRect(); hoverX = e.clientX - r.left; drawChart(); });
+chart.addEventListener('pointerleave', () => { hoverX = null; drawChart(); });
+
+// ---------- main loop
+let lastFrame = performance.now(), lastUi = 0;
+function frame(now) {
+  const dt = Math.min(0.1, Math.max(0, (now - lastFrame) / 1000)); lastFrame = now;
+  if (S.playing) sim.advance(sim.t + dt * speedNow());
+  consumeEvents();
+  movePeople(S.playing ? dt : 0);
+  drawScene(now / 1000);
+  if (now - lastUi > 200) { lastUi = now; updateLive(); if (chartSrc === 'day') drawChart(); }
+  requestAnimationFrame(frame);
+}
+
+// ---------- boot
+function boot() {
+  readTheme();
+  buildControls();
+  layoutScene();
+  const fromHash = (location.hash || '').replace('#', '');
+  const first = TAB_KEYS.includes(fromHash) ? fromHash : 'why';
+  if (first === 'play') { S.p = Object.assign({}, BASE); S.speedIdx = 3; resetDay(); selectTab('play', { load: false }); }
+  else selectTab(first);
+  setPlaying(!reduceMotion);
+  syncChartButtons(); drawChart();
+  if ('ResizeObserver' in window) new ResizeObserver(() => { layoutScene(); drawChart(); }).observe(scene.parentElement);
+  else window.addEventListener('resize', () => { layoutScene(); drawChart(); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => drawChart());
+  requestAnimationFrame(frame);
+}
+boot();
+})();
+</script>
+</body>
+</html>
