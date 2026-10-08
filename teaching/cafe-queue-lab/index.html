@@ -249,7 +249,7 @@ tbody tr:last-child td { border-bottom: 0; }
           <div class="seg-btns" role="group" aria-label="What to plot">
             <button type="button" data-chart-mode="queue" aria-pressed="true">People in line</button>
             <button type="button" data-chart-mode="avg" aria-pressed="false">Average time in line</button>
-            <button type="button" data-chart-mode="dist" aria-pressed="false">Time-in-line distribution</button>
+            <button type="button" data-chart-mode="dist" aria-pressed="false">People-in-line distribution</button>
           </div>
           <div class="seg-btns" role="group" aria-label="Which data">
             <button type="button" data-chart-src="day" aria-pressed="true">This day</button>
@@ -529,6 +529,7 @@ class Sim {
     this.arrived = 0; this.served = 0; this.balked = 0; this.waited = 0;
     this.sumWq = 0; this.sumS = 0; this.sumSys = 0;
     this.areaQ = 0; this.busy = 0; this.maxQ = 0;
+    this.occ = [0];                              // minutes with exactly n people in line
     this.hist = this.track ? [[0, 0]] : null;    // people in line, at each change
     this.avgHist = this.track ? [[0, 0]] : null; // average time in line so far, at each departure
     this.waits = this.record ? [] : null;
@@ -554,7 +555,9 @@ class Sim {
     }
     const dt = tn - this.lastT;
     if (dt > 0) {
-      this.areaQ += this.qLen() * dt;
+      const q = this.qLen();
+      this.areaQ += q * dt;
+      this.occ[q] = (this.occ[q] || 0) + dt;
       if (this.serving) this.busy += dt;
       this.lastT = tn;
     }
@@ -660,7 +663,7 @@ function longRun(p, hours, seed) {
   const s = new Sim(p, seed, { record: true, sampleEvery: hours * 60 / 1000 });
   s.advance(hours * 60);
   const r = s.summary();
-  r.samples = s.samples; r.waits = s.waits;
+  r.samples = s.samples; r.waits = s.waits; r.occ = s.occ;
   return r;
 }
 /* ===== ENGINE END ===== */
@@ -852,7 +855,7 @@ $('#btn-long').addEventListener('click', () => {
     const r = longRun(p, LONG_HOURS, LONG_SEED);
     const stable = isStable(p);
     runCount++;
-    lastLong = { key: keyOf(p), p, r, stable, n: runCount, bins: null,
+    lastLong = { key: keyOf(p), p, r, stable, n: runCount,
                  qPts: r.samples.map((s) => [s[0], s[1]]), aPts: r.samples.map((s) => [s[0], s[2]]) };
     addRow(runCount, p, r, stable, tabAtClick);
     $('#long-result').innerHTML = (stable
@@ -1234,16 +1237,17 @@ function valAt(pts, t) {
   while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (pts[mid][0] <= t) lo = mid; else hi = mid - 1; }
   return pts[lo][1];
 }
-function histBins(waits) {
-  const n = waits ? waits.length : 0; if (!n) return null;
-  let zero = 0; const pos = [];
-  for (const w of waits) if (w < 1e-9) zero++; else pos.push(w);
-  const sorted = Float64Array.from(pos).sort();
-  const hi = sorted.length ? sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.99))] : 0;
-  const bw = hi > 0 ? niceStep(hi, 8) : 1, nb = Math.max(1, Math.ceil(hi / bw) || 1);
-  const counts = new Array(nb).fill(0);
-  for (const w of sorted) counts[Math.min(nb - 1, Math.floor(w / bw))]++;
-  return { n, zero, bw, nb, counts };
+function occBars(occ, cap) { // share of time with exactly 0, 1, 2, ... people in line
+  if (!occ) return null;
+  let total = 0; for (const v of occ) total += v || 0;
+  if (!(total > 0)) return null;
+  const MAXN = 15;                                      // 15 or more people share the last bar
+  const seen = occ.length - 1, top = Math.max(seen, Math.min(5, cap));
+  const shares = [];
+  for (let n = 0; n <= Math.min(top, MAXN - 1); n++) shares.push((occ[n] || 0) / total);
+  const pooled = top >= MAXN;
+  if (pooled) { let rest = 0; for (let n = MAXN; n <= seen; n++) rest += occ[n] || 0; shares.push(rest / total); }
+  return { shares, pooled };
 }
 function chartSetup() {
   const w = chart.parentElement.clientWidth || 600, h = 180, dpr = window.devicePixelRatio || 1;
@@ -1260,10 +1264,10 @@ function drawChart() {
   const src = fromLong ? `long run #${lastLong.n}, 10,000 hours: ${setting}` : 'this day';
   const cap = $('#chart-cap');
   if (chartMode === 'dist') {
-    const bins = fromLong ? (lastLong.bins || (lastLong.bins = histBins(lastLong.r.waits))) : histBins(sim.waits);
-    const avg = fromLong ? lastLong.r.wq : (sim.served ? sim.sumWq / sim.served : NaN);
-    cap.innerHTML = `Time in line: share of customers <span>(${bins ? int(bins.n) : 0} customers served, ${src})</span>`;
-    drawDist(bins, avg);
+    const bars = occBars(fromLong ? lastLong.r.occ : sim.occ, p.cap);
+    const avg = fromLong ? lastLong.r.lq : (sim.lastT > 0 ? sim.areaQ / sim.lastT : NaN);
+    cap.innerHTML = `People waiting in line: share of time <span>(not counting the customer at the counter; ${src})</span>`;
+    drawDist(bars, avg);
   } else if (chartMode === 'queue') {
     cap.innerHTML = `People waiting in line <span>(not counting the customer at the counter; ${src})</span>`;
     drawTime(fromLong ? lastLong.qPts : sim.hist, fromLong ? LONG_HOURS * 60 : sim.t, 'max', null, 'people');
@@ -1319,38 +1323,38 @@ function drawTime(pts, Tend, agg, ref, unit) {
 function drawDist(b, avg) {
   const { w, h, pad } = chartSetup(), pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
   if (!b) {
-    cg.fillStyle = C.muted; cg.textAlign = 'center'; cg.textBaseline = 'middle'; cg.fillText('No customers served yet.', w / 2, h / 2);
+    cg.fillStyle = C.muted; cg.textAlign = 'center'; cg.textBaseline = 'middle'; cg.fillText('Nothing to show yet.', w / 2, h / 2);
     chartHit = null; tip.hidden = true; return;
   }
-  const shares = [b.zero / b.n].concat(b.counts.map((c) => c / b.n));
-  const ymax = Math.max(...shares) * 100, ys = niceStep(Math.max(ymax, 5), 4), ytop = ys * Math.ceil(Math.max(ymax, 5) / ys);
+  const k = b.shares.length;
+  const ymax = Math.max(...b.shares) * 100, ys = niceStep(Math.max(ymax, 5), 4), ytop = ys * Math.ceil(Math.max(ymax, 5) / ys);
   const Y = (s) => pad.t + ph - s * 100 / ytop * ph;
   cg.strokeStyle = C.rule; cg.lineWidth = 1; cg.fillStyle = C.muted; cg.textAlign = 'right'; cg.textBaseline = 'middle';
-  for (let k = 0; k * ys <= ytop + 1e-9; k++) { const v = k * ys, y = Math.round(pad.t + ph - v / ytop * ph) + 0.5; cg.beginPath(); cg.moveTo(pad.l, y); cg.lineTo(w - pad.r, y); cg.stroke(); cg.fillText(fmtNum(v) + '%', pad.l - 6, y); }
-  const slotW = pw / (b.nb + 1.6), x0 = pad.l + slotW * 1.6;     // the "no wait" bar, a gap, then the bins
-  const bars = [{ x: pad.l + slotW * 0.1, wd: slotW * 0.8, s: shares[0], label: 'No wait', col: C.muted }];
-  for (let k = 0; k < b.nb; k++) {
-    const lo = k * b.bw, hi = (k + 1) * b.bw;
-    const label = k === b.nb - 1 && b.nb > 1 ? fmtNum(lo) + ' min or more' : 'More than ' + fmtNum(lo) + ', up to ' + fmtNum(hi) + ' min';
-    bars.push({ x: x0 + k * slotW + 1, wd: Math.max(1, slotW - 2), s: shares[k + 1], label, col: C.sLine });
-  }
-  bars.forEach((bar) => { if (bar.s > 0) { cg.fillStyle = bar.col; const y = Y(bar.s), hh = pad.t + ph - y; rrc(bar.x, y, bar.wd, hh, Math.min(4, bar.wd / 2, hh)); cg.fill(); } });
+  for (let q = 0; q * ys <= ytop + 1e-9; q++) { const v = q * ys, y = Math.round(pad.t + ph - v / ytop * ph) + 0.5; cg.beginPath(); cg.moveTo(pad.l, y); cg.lineTo(w - pad.r, y); cg.stroke(); cg.fillText(fmtNum(v) + '%', pad.l - 6, y); }
+  const slotW = pw / k, mid = (n) => pad.l + (n + 0.5) * slotW;   // one bar per number of people
+  const bars = b.shares.map((s, n) => {
+    const more = b.pooled && n === k - 1;
+    return { n, s, x: pad.l + n * slotW + slotW * 0.15, wd: Math.max(1, slotW * 0.7), more,
+             label: n === 0 ? 'Nobody waiting' : n + (more ? ' or more' : '') + ' waiting' };
+  });
+  cg.fillStyle = C.accent;
+  bars.forEach((bar) => { if (bar.s > 0) { const y = Y(bar.s), hh = pad.t + ph - y; rrc(bar.x, y, bar.wd, hh, Math.min(4, bar.wd / 2, hh)); cg.fill(); } });
   cg.fillStyle = C.muted; cg.textAlign = 'center'; cg.textBaseline = 'top';
-  cg.fillText('no wait', pad.l + slotW * 0.5, h - pad.b + 6);
-  const every = Math.max(1, Math.ceil(b.nb / 7));
-  for (let k = 0; k <= b.nb; k += every) { const x = x0 + k * slotW; if (x > w - pad.r - 10) break; cg.fillText(fmtNum(k * b.bw), x, h - pad.b + 6); }
-  cg.textAlign = 'right'; cg.fillText('min', w - pad.r, h - pad.b + 6);
-  if (isFinite(avg) && avg > 0) {
-    const xa = x0 + Math.min(avg / b.bw, b.nb) * slotW;
-    cg.strokeStyle = C.ink2; cg.lineWidth = 1.2; cg.setLineDash([5, 4]); cg.beginPath(); cg.moveTo(xa + 0.5, pad.t); cg.lineTo(xa + 0.5, pad.t + ph); cg.stroke(); cg.setLineDash([]);
-    cg.fillStyle = C.ink2; cg.textBaseline = 'top'; cg.textAlign = xa > w - 150 ? 'right' : 'left';
-    cg.fillText('average ' + fmt1(avg) + ' min', xa + (xa > w - 150 ? -5 : 5), pad.t);
+  const every = slotW >= 18 ? 1 : slotW >= 9 ? 2 : 5;
+  bars.forEach((bar) => { if (bar.n % every === 0 || bar.more) cg.fillText(bar.more ? bar.n + '+' : String(bar.n), mid(bar.n), h - pad.b + 6); });
+  if (isFinite(avg)) {
+    const xa = Math.round(mid(Math.min(avg, k - 1))) + 0.5;
+    cg.strokeStyle = C.ink2; cg.lineWidth = 1.2; cg.setLineDash([5, 4]); cg.beginPath(); cg.moveTo(xa, pad.t); cg.lineTo(xa, pad.t + ph); cg.stroke(); cg.setLineDash([]);
+    const txt = 'average ' + (avg < 100 ? fmt1(avg) : int(avg)) + ' waiting', left = xa > w - 150;
+    const tw = cg.measureText(txt).width, tx = left ? xa - 5 - tw : xa + 5;
+    cg.fillStyle = C.surface; cg.fillRect(tx - 3, pad.t - 1, tw + 6, 15);     // keep the label readable over a bar
+    cg.fillStyle = C.ink2; cg.textBaseline = 'top'; cg.textAlign = 'left';
+    cg.fillText(txt, tx, pad.t + 1);
   }
   chartHit = { kind: 'dist' };
-  if (hoverX !== null) {
-    const bar = bars.find((r) => hoverX >= r.x - 1 && hoverX <= r.x + r.wd + 1);
-    if (bar) showTip(bar.x + bar.wd / 2, Y(bar.s), bar.label + ': ' + (bar.s * 100).toFixed(bar.s < 0.1 ? 1 : 0) + '% of customers');
-    else tip.hidden = true;
+  if (hoverX !== null && hoverX >= pad.l && hoverX < pad.l + pw) {
+    const bar = bars[Math.min(k - 1, Math.floor((hoverX - pad.l) / slotW))];
+    showTip(mid(bar.n), Y(bar.s), bar.label + ': ' + (bar.s * 100).toFixed(bar.s < 0.1 ? 1 : 0) + '% of the time');
   } else tip.hidden = true;
 }
 function rrc(x, y, w, h, r) { cg.beginPath(); cg.moveTo(x, y + h); cg.lineTo(x, y + r); cg.arcTo(x, y, x + r, y, r); cg.lineTo(x + w - r, y); cg.arcTo(x + w, y, x + w, y + r, r); cg.lineTo(x + w, y + h); cg.closePath(); }
