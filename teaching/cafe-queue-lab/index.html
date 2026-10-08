@@ -249,7 +249,7 @@ tbody tr:last-child td { border-bottom: 0; }
           <div class="seg-btns" role="group" aria-label="What to plot">
             <button type="button" data-chart-mode="queue" aria-pressed="true">People in line</button>
             <button type="button" data-chart-mode="avg" aria-pressed="false">Average time in line</button>
-            <button type="button" data-chart-mode="dist" aria-pressed="false">People-in-line distribution</button>
+            <button type="button" data-chart-mode="dist" aria-pressed="false">People-in-café distribution</button>
           </div>
           <div class="seg-btns" role="group" aria-label="Which data">
             <button type="button" data-chart-src="day" aria-pressed="true">This day</button>
@@ -529,7 +529,7 @@ class Sim {
     this.arrived = 0; this.served = 0; this.balked = 0; this.waited = 0;
     this.sumWq = 0; this.sumS = 0; this.sumSys = 0;
     this.areaQ = 0; this.busy = 0; this.maxQ = 0;
-    this.occ = [0];                              // minutes with exactly n people in line
+    this.occ = [0];                              // minutes with exactly n people in the café (line + counter)
     this.hist = this.track ? [[0, 0]] : null;    // people in line, at each change
     this.avgHist = this.track ? [[0, 0]] : null; // average time in line so far, at each departure
     this.waits = this.record ? [] : null;
@@ -557,7 +557,8 @@ class Sim {
     if (dt > 0) {
       const q = this.qLen();
       this.areaQ += q * dt;
-      this.occ[q] = (this.occ[q] || 0) + dt;
+      const n = q + (this.serving ? 1 : 0);
+      this.occ[n] = (this.occ[n] || 0) + dt;
       if (this.serving) this.busy += dt;
       this.lastT = tn;
     }
@@ -1237,12 +1238,12 @@ function valAt(pts, t) {
   while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (pts[mid][0] <= t) lo = mid; else hi = mid - 1; }
   return pts[lo][1];
 }
-function occBars(occ, cap) { // share of time with exactly 0, 1, 2, ... people in line
+function occBars(occ, cap) { // share of time with exactly 0, 1, 2, ... people in the café (in system)
   if (!occ) return null;
   let total = 0; for (const v of occ) total += v || 0;
   if (!(total > 0)) return null;
   const MAXN = 15;                                      // 15 or more people share the last bar
-  const seen = occ.length - 1, top = Math.max(seen, Math.min(5, cap));
+  const seen = occ.length - 1, top = Math.max(seen, Math.min(5, cap + 1));
   const shares = [];
   for (let n = 0; n <= Math.min(top, MAXN - 1); n++) shares.push((occ[n] || 0) / total);
   const pooled = top >= MAXN;
@@ -1265,8 +1266,8 @@ function drawChart() {
   const cap = $('#chart-cap');
   if (chartMode === 'dist') {
     const bars = occBars(fromLong ? lastLong.r.occ : sim.occ, p.cap);
-    const avg = fromLong ? lastLong.r.lq : (sim.lastT > 0 ? sim.areaQ / sim.lastT : NaN);
-    cap.innerHTML = `People waiting in line: share of time <span>(not counting the customer at the counter; ${src})</span>`;
+    const avg = fromLong ? lastLong.r.lq + lastLong.r.util : (sim.lastT > 0 ? (sim.areaQ + sim.busy) / sim.lastT : NaN);
+    cap.innerHTML = `People in the café (in line + at the counter): share of time <span>(0 people = barista idle; ${src})</span>`;
     drawDist(bars, avg);
   } else if (chartMode === 'queue') {
     cap.innerHTML = `People waiting in line <span>(not counting the customer at the counter; ${src})</span>`;
@@ -1335,7 +1336,7 @@ function drawDist(b, avg) {
   const bars = b.shares.map((s, n) => {
     const more = b.pooled && n === k - 1;
     return { n, s, x: pad.l + n * slotW + slotW * 0.15, wd: Math.max(1, slotW * 0.7), more,
-             label: n === 0 ? 'Nobody waiting' : n + (more ? ' or more' : '') + ' waiting' };
+             label: n === 0 ? 'Nobody in the café (barista idle)' : n + (more ? ' or more' : '') + ' in the café' };
   });
   cg.fillStyle = C.accent;
   bars.forEach((bar) => { if (bar.s > 0) { const y = Y(bar.s), hh = pad.t + ph - y; rrc(bar.x, y, bar.wd, hh, Math.min(4, bar.wd / 2, hh)); cg.fill(); } });
@@ -1345,7 +1346,7 @@ function drawDist(b, avg) {
   if (isFinite(avg)) {
     const xa = Math.round(mid(Math.min(avg, k - 1))) + 0.5;
     cg.strokeStyle = C.ink2; cg.lineWidth = 1.2; cg.setLineDash([5, 4]); cg.beginPath(); cg.moveTo(xa, pad.t); cg.lineTo(xa, pad.t + ph); cg.stroke(); cg.setLineDash([]);
-    const txt = 'average ' + (avg < 100 ? fmt1(avg) : int(avg)) + ' waiting', left = xa > w - 150;
+    const txt = 'average ' + (avg < 100 ? fmt1(avg) : int(avg)) + ' in café', left = xa > w - 150;
     const tw = cg.measureText(txt).width, tx = left ? xa - 5 - tw : xa + 5;
     cg.fillStyle = C.surface; cg.fillRect(tx - 3, pad.t - 1, tw + 6, 15);     // keep the label readable over a bar
     cg.fillStyle = C.ink2; cg.textBaseline = 'top'; cg.textAlign = 'left';
