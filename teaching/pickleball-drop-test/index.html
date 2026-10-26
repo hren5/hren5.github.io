@@ -1,0 +1,1770 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pickleball Drop Test</title>
+<meta name="description" content="Interactive simulation of a pickleball factory for OSCM 303 Statistical Quality Control: accuracy and consistency, the capability index Cpk, and control charts.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: the factory on the left (animation, live numbers, histogram with the capability index, control chart); a lesson rail on the right with one tab per part of the slides. */
+:root {
+  --bg: #f2f5f2; --surface: #ffffff; --surface-2: #e7ede8; --ink: #15201b; --ink-2: #3f4d46; --muted: #5c6962; --rule: #d2dbd4;
+  --accent: #006f51; --accent-strong: #00563f; --on-accent: #ffffff; --accent-soft: #dcefe6; --gold: #e8a91b; --danger: #b3261e; --danger-soft: #fbe3e1;
+  --focus: #00563f; --good: #0f7a55; --ctl: #8a5300; --pt-line: #c2571a; --john: #6a3d9a; --sally: #1f5aa8;
+  --ball: #d4e157; --ball-edge: #8f9a1c; --ball-hole: #8a9420;
+  --plant-wall: #e4e9ec; --plant-wall-2: #d7dee2; --plant-floor: #c5cdd2; --belt: #39424a; --belt-2: #5b656e;
+  --machine: #4f6b7d; --machine-2: #3b5262; --machine-ink: #ffffff; --tower: #8f9aa2; --plate: #5f676e; --crate: #9a7350; --gauge-bg: #f8faf9;
+  --f-display: "Archivo", "Arial Narrow", "Helvetica Neue", system-ui, sans-serif;
+  --f-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --radius: 10px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1412; --surface: #17201c; --surface-2: #1f2a25; --ink: #e6ece8; --ink-2: #bac6bf; --muted: #95a29b; --rule: #2d3933;
+    --accent: #43b98e; --accent-strong: #63cba3; --on-accent: #062519; --accent-soft: #173a2d; --gold: #f2c14e; --danger: #f2948b; --danger-soft: #3d1d1a;
+    --focus: #f2c14e; --good: #4fc193; --ctl: #f0b45a; --pt-line: #f08a4b; --john: #c09cf0; --sally: #7fb0f5;
+    --ball: #c9d63f; --ball-edge: #eef47e; --ball-hole: #8f9a1c;
+    --plant-wall: #1b2226; --plant-wall-2: #20292e; --plant-floor: #2a3338; --belt: #0e1215; --belt-2: #3a444b;
+    --machine: #3c5666; --machine-2: #2e4351; --machine-ink: #e6ece8; --tower: #74818a; --plate: #9aa3aa; --crate: #8a6847; --gauge-bg: #131b18;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1412; --surface: #17201c; --surface-2: #1f2a25; --ink: #e6ece8; --ink-2: #bac6bf; --muted: #95a29b; --rule: #2d3933;
+  --accent: #43b98e; --accent-strong: #63cba3; --on-accent: #062519; --accent-soft: #173a2d; --gold: #f2c14e; --danger: #f2948b; --danger-soft: #3d1d1a;
+  --focus: #f2c14e; --good: #4fc193; --ctl: #f0b45a; --pt-line: #f08a4b; --john: #c09cf0; --sally: #7fb0f5;
+  --ball: #c9d63f; --ball-edge: #eef47e; --ball-hole: #8f9a1c;
+  --plant-wall: #1b2226; --plant-wall-2: #20292e; --plant-floor: #2a3338; --belt: #0e1215; --belt-2: #3a444b;
+  --machine: #3c5666; --machine-2: #2e4351; --machine-ink: #e6ece8; --tower: #74818a; --plate: #9aa3aa; --crate: #8a6847; --gauge-bg: #131b18;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.5; }
+[hidden] { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.page { max-width: 1320px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 48px; display: grid; gap: 24px; }
+@media (min-width: 700px) { .page { padding-inline: 28px; } }
+
+h1, h2, h3 { font-family: var(--f-display); font-stretch: 78%; text-wrap: balance; margin: 0; line-height: 1.1; }
+h1 { font-size: clamp(2rem, 4.6vw, 3.1rem); font-weight: 800; letter-spacing: -0.01em; }
+h2 { font-size: 1.45rem; font-weight: 750; }
+h3 { font-size: 1.12rem; font-weight: 700; }
+p { margin: 0; }
+b, strong { font-weight: 700; }
+.eyebrow { font-family: var(--f-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.masthead { display: grid; gap: 8px; }
+.masthead .lede { max-width: 76ch; color: var(--ink-2); font-size: 1.04rem; }
+.masthead h1 span { color: var(--accent); }
+
+.app { display: grid; gap: 24px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+@media (min-width: 1040px) { .app { grid-template-columns: minmax(0, 1.7fr) minmax(330px, 1fr); } }
+.stage, .rail { min-width: 0; display: grid; gap: 16px; }
+
+.scene-card { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); overflow: hidden; }
+.scene-wrap { position: relative; width: 100%; }
+#scene { display: block; width: 100%; }
+.scene-foot { display: grid; gap: 12px; padding: 12px 14px 14px; border-top: 1px solid var(--rule); }
+.status { font-size: 0.95rem; color: var(--ink-2); min-height: 1.5em; }
+.status b { color: var(--ink); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.label-sm { font-size: 0.85rem; color: var(--muted); }
+.speed { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; flex: 1 1 320px; min-width: 0; }
+.speed label { font-weight: 700; font-size: 0.93rem; }
+.speed input { flex: 1 1 auto; min-width: 110px; }
+.speed output { font-family: var(--f-mono); font-size: 0.85rem; color: var(--accent); font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+@media (max-width: 480px) { .speed { flex-wrap: wrap; } }
+.check { display: inline-flex; gap: 8px; align-items: center; font-size: 0.92rem; }
+.check input { accent-color: var(--accent); width: 16px; height: 16px; }
+
+.btn { font: inherit; font-size: 0.93rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--rule); background: var(--surface-2); color: var(--ink); padding: 7px 13px; cursor: pointer; line-height: 1.25; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.primary:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
+.btn.event { background: transparent; border-style: dashed; font-weight: 600; }
+.btn.event .src { font-weight: 400; color: var(--muted); }
+.btn.fix { border-color: var(--accent); color: var(--accent); background: transparent; }
+button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+.active-causes { font-size: 0.88rem; color: var(--danger); font-weight: 700; }
+
+.stats.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: var(--radius); overflow: hidden; }
+@media (max-width: 480px) { .stats, .stats.four { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.tile { background: var(--surface); padding: 10px 12px; display: grid; gap: 2px; align-content: start; min-width: 0; }
+.tile .k { font-size: 0.8rem; color: var(--muted); }
+.stats.four .tile .v { font-size: 1.05rem; }
+.xm { font-family: var(--f-mono); font-size: 0.95em; }   /* <span class="xm">X̄</span> in body text: the body font misplaces the combining bar */
+.jump { display: none; justify-self: start; }
+.stage:focus, .rail-card:focus { outline: none; }
+@media (max-width: 1039px) { .jump { display: inline-block; } }
+.tile .v { font-family: var(--f-mono); font-size: 1.2rem; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.tile .v.small { font-size: 0.98rem; }
+.tile .s { font-size: 0.78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tile .v.bad { color: var(--danger); }
+.tile .v.ok { color: var(--good); }
+
+.chart-card { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); padding: 12px 14px; margin: 0; display: grid; gap: 8px; }
+.chart-head { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: space-between; align-items: center; }
+.seg-btns { display: inline-flex; flex-wrap: wrap; gap: 2px; background: var(--surface-2); border-radius: 8px; padding: 2px; }
+.seg-btns button { font: inherit; font-size: 0.85rem; font-weight: 700; border: 0; background: transparent; color: var(--ink-2); padding: 5px 10px; border-radius: 6px; cursor: pointer; }
+.seg-btns button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 0 0 1px var(--rule); }
+.seg-btns button:disabled { opacity: 0.45; cursor: not-allowed; }
+.chart-cap { font-size: 0.9rem; font-weight: 700; }
+.chart-cap span { font-weight: 400; color: var(--muted); }
+.chart-wrap { position: relative; }
+#hist, #ctl { display: block; width: 100%; }
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-size: 0.8rem; padding: 4px 8px; border-radius: 6px; white-space: nowrap; transform: translate(-50%, -115%); font-variant-numeric: tabular-nums; z-index: 2; }
+
+.cap-strip { border-top: 1px solid var(--rule); padding-top: 10px; display: grid; gap: 6px; font-size: 0.93rem; }
+.cap-strip .src { font-size: 0.8rem; color: var(--muted); }
+.formula { font-family: var(--f-mono); font-size: 0.86rem; line-height: 1.6; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.formula sub { font-size: 0.72em; }
+.verdict { font-weight: 700; }
+.verdict.ok { color: var(--good); }
+.verdict.bad { color: var(--danger); }
+.star { font-size: 0.85rem; color: var(--ink-2); }
+.star .formula { font-size: 0.82rem; }
+.days { font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.cap-strip > * { min-width: 0; }
+.steps { margin: 0; padding-left: 1.4em; display: grid; gap: 8px; }
+.steps li { min-width: 0; }
+.steps th { white-space: normal; }
+.steps th, .steps td { padding: 5px 6px; }
+@media (max-width: 480px) { .steps { padding-left: 1.2em; } .steps table { font-size: 0.8rem; } }
+.steps td:last-child { white-space: normal; }
+.steps .table-wrap { margin-top: 6px; }
+.steps td.ok { color: var(--good); font-weight: 700; }
+.steps td.bad { color: var(--danger); font-weight: 700; }
+.steps tr.sel th, .steps tr.sel td { background: var(--accent-soft); }
+.steps tr.sel td.ok { color: var(--accent-strong); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.82rem; color: var(--ink-2); }
+.legend i { display: inline-block; width: 14px; height: 3px; vertical-align: 3px; margin-right: 5px; }
+.legend i.dash { background: repeating-linear-gradient(90deg, var(--ctl) 0 4px, transparent 4px 7px); }
+.legend i.solid { background: var(--muted); }
+.legend i.pt { background: var(--pt-line); }
+.alarm { font-size: 0.93rem; font-weight: 700; color: var(--good); min-height: 1.4em; }
+.alarm.bad { color: var(--danger); }
+
+.longrun { background: var(--accent-soft); border-radius: var(--radius); padding: 12px 14px; display: grid; gap: 8px; }
+.longrun p { font-size: 0.95rem; }
+
+table { border-collapse: collapse; width: 100%; font-size: 0.88rem; font-variant-numeric: tabular-nums; }
+th, td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+th { font-weight: 700; color: var(--ink-2); background: var(--surface-2); font-size: 0.8rem; }
+th.l, td.l { text-align: left; }
+tbody tr:last-child td { border-bottom: 0; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 8px; }
+td.john, th.john { color: var(--john); }
+td.sally, th.sally { color: var(--sally); }
+
+/* Rail */
+.rail-card { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px; border-bottom: 1px solid var(--rule); }
+[role="tab"] { flex: 1 1 auto; font: inherit; font-size: 0.86rem; font-weight: 700; line-height: 1.2; text-align: center; padding: 7px 10px; border-radius: 7px; border: 0; background: transparent; color: var(--ink-2); cursor: pointer; }
+[role="tab"]:hover { background: var(--surface-2); }
+[role="tab"][aria-selected="true"] { background: var(--accent); color: var(--on-accent); }
+[role="tab"]:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+[role="tabpanel"] { padding: 16px; display: grid; gap: 14px; }
+[role="tabpanel"] > p { max-width: 62ch; }
+.from-slide { font-family: var(--f-mono); font-size: 0.8rem; letter-spacing: 0.02em; color: var(--accent); }
+
+.controls { display: grid; gap: 12px; }
+.ctl { display: grid; gap: 4px; border: 0; margin: 0; padding: 0; min-width: 0; }
+.ctl-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.ctl label, .ctl legend { font-weight: 700; font-size: 0.93rem; padding: 0; }
+.ctl output { font-family: var(--f-mono); font-size: 0.88rem; font-variant-numeric: tabular-nums; color: var(--accent); font-weight: 600; }
+.ctl-hint { font-size: 0.82rem; color: var(--muted); }
+.kpick { display: flex; flex-wrap: wrap; gap: 14px; }
+.kpick label { font-weight: 400; display: inline-flex; gap: 6px; align-items: center; font-size: 0.93rem; }
+.kpick input { accent-color: var(--accent); }
+
+.predict { border-left: 3px solid var(--gold); padding: 2px 0 2px 12px; display: grid; gap: 6px; }
+.predict p { font-size: 0.95rem; }
+details summary { cursor: pointer; font-weight: 700; color: var(--accent); font-size: 0.92rem; }
+details[open] summary { margin-bottom: 4px; }
+details p { font-size: 0.93rem; color: var(--ink-2); }
+ul.challenges { margin: 0; padding-left: 1.2em; display: grid; gap: 12px; font-size: 0.95rem; }
+.note-star { font-size: 0.82rem; color: var(--muted); }
+.defs { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; font-size: 0.95rem; }
+/* the C_pk formula (slides 11-12) */
+.fbox { background: var(--surface-2); border-radius: 8px; padding: 12px 14px; display: grid; gap: 8px; min-width: 0; }
+.fbox p { font-size: 0.93rem; color: var(--ink); }
+.fbox .formula { font-size: 0.86rem; }
+.eq-big { font-family: var(--f-mono); font-size: 0.95rem; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; font-variant-numeric: tabular-nums; }
+.eq-big .grp { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.frac { display: inline-grid; text-align: center; line-height: 1.3; }
+.frac > span { padding: 1px 4px; }
+.frac > span:first-child { border-bottom: 1.5px solid currentColor; }
+.brace { font-size: 2.2em; line-height: 1; font-weight: 400; }
+/* pattern buttons on the control chart (slides 21-22) */
+body:not([data-tab="ctl"]) #pat-box { display: none; }
+.pat { display: grid; gap: 6px; }
+.pat-text { font-size: 0.95rem; }
+/* safety distance vs. the mistake */
+#cmp { display: block; width: 100%; }
+.cmp-text { font-size: 0.98rem; min-height: 3em; }
+.cmp-nav { align-items: center; }
+/* practice */
+.prac-form { display: grid; gap: 10px; }
+.prac-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; border: 0; margin: 0; padding: 0; min-width: 0; }
+.prac-row > label, .prac-row legend { font-weight: 700; font-size: 0.93rem; padding: 0; }
+.prac-row .opts { display: flex; gap: 14px; }
+.prac-row .opts label { font-weight: 400; display: inline-flex; gap: 6px; align-items: center; }
+.prac-row input[type="text"] { font: inherit; font-family: var(--f-mono); width: 6.5em; padding: 5px 8px; border: 1px solid var(--muted); border-radius: 6px; background: var(--surface); color: var(--ink); }
+.prac-row input[type="text"]:focus-visible, .prac-row input[type="radio"]:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; }
+.mark { grid-column: 1 / -1; font-size: 0.86rem; font-weight: 700; min-height: 0; }
+.mark.ok { color: var(--good); }
+.mark.bad { color: var(--danger); }
+.prac-ask { font-size: 1.02rem; }
+.prac-fb { display: grid; gap: 6px; font-size: 0.93rem; }
+.prac-fb:empty { display: none; }
+.prac-fb .formula { font-size: 0.84rem; }
+.prac-verdict { font-weight: 700; }
+.prac-verdict.ok { color: var(--good); }
+.prac-verdict.bad { color: var(--danger); }
+/* what each tab shows */
+body[data-tab="cap"] #cap-strip, body[data-tab="ctl"] #cap-strip, body[data-tab="prac"] #cap-strip { display: none; }
+body[data-tab="prac"] .scene-foot .row, body[data-tab="prac"] .seg-btns, body[data-tab="prac"] .longrun { display: none; }
+body[data-tab="prac"] #cmp-text, body[data-tab="prac"] #cmp-nav { display: none; }
+
+.how { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); padding: 12px 16px; }
+.how summary { font-size: 1rem; color: var(--ink); }
+.how ul { margin: 8px 0 4px; padding-left: 1.2em; display: grid; gap: 6px; max-width: 85ch; color: var(--ink-2); font-size: 0.95rem; }
+.err { background: var(--danger-soft); color: var(--danger); padding: 10px 14px; border-radius: 8px; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <p class="eyebrow">OSCM 303 · Quality Management II · Statistical Quality Control</p>
+    <h1>Pickleball <span>Drop</span> Test</h1>
+    <p class="lede">Fairfax Pickleball Works produces tournament pickleballs. According to the USA Pickleball official equipment standard, a ball dropped from 78 inches onto a granite plate must bounce between <b>30 and 34 inches</b>. No two balls bounce exactly the same. Every hour, quality control pulls 10 balls off the line and drop-tests them. At the end of each 10-hour day, the 100 tested balls tell us whether the line is capable; every hour, the average of the 10 goes on the control chart.</p>
+  </header>
+  <noscript><p class="err">This page needs JavaScript. Open it in Chrome, Edge, Firefox, or Safari.</p></noscript>
+  <button class="btn jump" type="button" data-jump="rail">Questions for this tab ↓</button>
+  <p id="boot-error" class="err" hidden></p>
+
+  <main class="app">
+    <section class="stage" aria-labelledby="stage-h">
+      <h2 id="stage-h" class="sr-only">The factory</h2>
+      <div class="scene-card">
+        <div class="scene-wrap">
+          <canvas id="scene" role="img" aria-label="Animated pickleball factory. A molding machine on the left makes the balls, a hole drill over the conveyor drills their holes, and the conveyor carries them to packing. Every 6 minutes quality control lifts one ball to a drop tower, drops it from 78 inches, and reads how high it bounces on a zoomed scale from 28 to 36 inches with the 30 to 34 inch limits marked. The text below the picture describes what is happening now.">Animated pickleball factory with a drop-test tower.</canvas>
+        </div>
+        <div class="scene-foot">
+          <p id="status" class="status">Loading the factory…</p>
+          <div class="row">
+            <button id="btn-play" class="btn primary" type="button">Play</button>
+            <button id="btn-restart" class="btn" type="button" title="Back to Day 1 with the same balls">Start over</button>
+            <button id="btn-newnums" class="btn" type="button" title="Back to Day 1 with new random balls">New random balls</button>
+            <button id="btn-defaults" class="btn" type="button" title="Back to this tab's starting settings, restarted from Day 1">Reset</button>
+            <div class="speed">
+              <label for="speed">Speed</label>
+              <input type="range" id="speed" min="0" max="8" step="1" value="3">
+              <output id="speed-out" for="speed">1 second = 5 minutes</output>
+            </div>
+          </div>
+          <div class="row">
+            <label class="check"><input type="checkbox" id="pause-day"> Pause at the end of each day (5:00 pm)</label>
+          </div>
+          <div id="cause-row" class="row" hidden>
+            <span class="label-sm">Make something go wrong (special causes):</span>
+            <button class="btn event" type="button" data-cause="batch">Bad plastic batch <span class="src">· Materials</span></button>
+            <button class="btn event" type="button" data-cause="cold">Plant gets cold <span class="src">· Environment</span></button>
+            <button class="btn event" type="button" data-cause="mold">Oven runs hot <span class="src">· Machines</span></button>
+            <button class="btn event" type="button" data-cause="operator">New operator <span class="src">· People</span></button>
+            <button id="btn-fix" class="btn fix" type="button">Find the cause and fix it</button>
+          </div>
+          <p id="active-causes" class="active-causes" hidden></p>
+        </div>
+      </div>
+
+      <div class="stats" role="group" aria-label="Numbers for the current day">
+        <div class="tile"><span class="k">Clock</span><span class="v" id="st-clock">Day 1 · 7:00 am</span><span class="s">Shift 7:00 am to 5:00 pm</span></div>
+        <div class="tile"><span class="k">Balls made today</span><span class="v" id="st-made">0</span><span class="s" id="st-made-s">600 per hour</span></div>
+        <div class="tile"><span class="k">Balls tested today</span><span class="v" id="st-tested">0 of 100</span><span class="s">10 per hour, one every 6 min</span></div>
+        <div class="tile"><span class="k">Outside 30–34 today</span><span class="v" id="st-out">–</span><span class="s" id="st-out-s">of the tested balls</span></div>
+        <div class="tile"><span class="k">Last hour's average</span><span class="v" id="st-lastx">–</span><span class="s" id="st-lastx-s">average of its 10 tested balls</span></div>
+        <div class="tile"><span class="k">Control chart</span><span class="v" id="st-chart">–</span><span class="s" id="st-chart-s">&nbsp;</span></div>
+      </div>
+
+      <figure class="chart-card" id="hist-card" aria-labelledby="hist-cap">
+        <div class="chart-head">
+          <p class="chart-cap" id="hist-cap">Bounce heights of the tested balls</p>
+          <div class="seg-btns" role="group" aria-label="Which tested balls to show">
+            <button type="button" data-hist-src="today" aria-pressed="true">Today</button>
+            <button type="button" data-hist-src="all" aria-pressed="false">All days so far</button>
+            <button type="button" data-hist-src="long" aria-pressed="false" disabled title="Click Run 100 days first">100 days</button>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="hist" role="img" aria-label="Histogram of the bounce heights of the tested balls, with the tolerance limits 30 and 34 inches, the target 32 inches and the sample average marked."></canvas>
+          <div id="hist-tip" class="tip" hidden></div>
+        </div>
+        <div id="cap-strip" class="cap-strip" aria-live="off"></div>
+      </figure>
+
+      <figure class="chart-card" id="cmp-card" hidden>
+        <figcaption class="chart-cap">Safety distance vs. the mistake <span id="cmp-sub">(same inch scale as the histogram)</span></figcaption>
+        <div class="chart-wrap">
+          <canvas id="cmp" role="img" aria-label="Two bars on the same inch scale as the histogram: the safety distance, from the average to the nearer tolerance limit, and the mistake, how far balls stray from the average. The sentence below the picture explains it in words."></canvas>
+        </div>
+        <p id="cmp-text" class="cmp-text"></p>
+        <p id="cmp-live" class="sr-only" aria-live="polite"></p>
+        <div class="row cmp-nav" id="cmp-nav">
+          <button class="btn" type="button" id="cmp-back">◀ Back</button>
+          <span class="label-sm" id="cmp-count">Step 1 of 5</span>
+          <button class="btn primary" type="button" id="cmp-next">Next ▶</button>
+        </div>
+      </figure>
+
+      <figure class="chart-card" id="ctl-card">
+        <figcaption class="chart-cap">Control chart: average bounce of each hour's 10 tested balls <span>(one point per hour, newest on the right)</span></figcaption>
+        <div class="pat" id="pat-box">
+          <span class="label-sm" id="pat-lab">Show a pattern from slides 21–22 (one day, 7:00 am to 5:00 pm):</span>
+          <div class="seg-btns" role="group" aria-labelledby="pat-lab">
+            <button type="button" data-pattern="normal" aria-pressed="false">Normal</button>
+            <button type="button" data-pattern="above" aria-pressed="false">One point above</button>
+            <button type="button" data-pattern="below" aria-pressed="false">One point below</button>
+            <button type="button" data-pattern="run" aria-pressed="false">Run of five below</button>
+            <button type="button" data-pattern="trend" aria-pressed="false">Trend</button>
+            <button type="button" data-pattern="erratic" aria-pressed="false">Erratic</button>
+          </div>
+          <p id="pat-text" class="pat-text" hidden></p>
+        </div>
+        <div class="legend" aria-hidden="true"><span><i class="pt"></i>hourly average</span><span><i class="solid"></i>CL = central line</span><span><i class="dash"></i>UCL, LCL = upper and lower control limits</span></div>
+        <div class="chart-wrap">
+          <canvas id="ctl" role="img" aria-label="Control chart of the hourly average bounce height, with the central line and the upper and lower control limits. Points that signal a problem are drawn in red with a ring. The sentence below the chart names the latest signal."></canvas>
+          <div id="ctl-tip" class="tip" hidden></div>
+        </div>
+        <p id="alarm" class="alarm" aria-live="polite"></p>
+      </figure>
+
+      <div class="longrun">
+        <div class="row">
+          <button id="btn-long" class="btn primary" type="button">Run 100 days</button>
+          <span class="label-sm">10,000 tested balls with the current settings and no special causes. Shown in the histogram under "100 days".</span>
+        </div>
+        <p id="long-result">No 100-day run yet.</p>
+      </div>
+    </section>
+
+    <aside class="rail" aria-label="Ideas from the slides">
+      <div class="rail-card">
+        <button class="btn jump" type="button" data-jump="stage" style="margin: 8px 8px 0;">↑ Back to the factory</button>
+        <div class="tabs" role="tablist" aria-label="Parts of the Statistical Quality Control slides">
+          <button role="tab" type="button" id="tab-acc" aria-controls="panel-acc" aria-selected="true">Accurate vs. consistent</button>
+          <button role="tab" type="button" id="tab-cap" aria-controls="panel-cap" aria-selected="false" tabindex="-1">Capability index C<sub>pk</sub></button>
+          <button role="tab" type="button" id="tab-prac" aria-controls="panel-prac" aria-selected="false" tabindex="-1">C<sub>pk</sub> practice</button>
+          <button role="tab" type="button" id="tab-ctl" aria-controls="panel-ctl" aria-selected="false" tabindex="-1">Control chart</button>
+          <button role="tab" type="button" id="tab-play" aria-controls="panel-play" aria-selected="false" tabindex="-1">Playground</button>
+        </div>
+
+        <section role="tabpanel" id="panel-acc" aria-labelledby="tab-acc">
+          <p class="from-slide">On the slides: accurate = mean close to target; consistent = low standard deviation (slides 6–9)</p>
+          <h2>John's line vs. Sally's line</h2>
+          <p>On this tab the factory runs two lines. Both aim for the middle of the 30–34 inch range: <b>32 inches</b>. John runs one and Sally the other, like the two dart players on the slides. Watch both histograms fill as each line's balls are tested.</p>
+          <div class="controls" data-controls="johnAim sallySd"></div>
+          <p class="label-sm">The answers below are for the starting settings: John aims at 33.0 inches and Sally's σ is 0.90 inches. <b>Reset</b> brings them back.</p>
+          <div class="predict">
+            <p><b>Predict, then run.</b> Which line is more accurate? Which is more consistent?</p>
+            <details><summary>Show what happens</summary>
+              <p>Sally's line is <b>accurate</b>: its average is right at the 32-inch target. John's line is <b>consistent</b>: his balls bounce within a narrow range, but they average about 33 inches, 1 inch too bouncy. It is the dart board from the slides: John's darts land close together but off the bull's-eye, Sally's are centered but scattered.</p>
+            </details>
+          </div>
+          <div class="predict">
+            <p><b>Predict.</b> Which line makes more balls outside 30–34 inches? Run a day or two, then click <b>Run 100 days</b>.</p>
+            <details><summary>Show what happens</summary>
+              <p>Sally's line. Over 100 days about 2.6% of her balls fall outside the limits, against about 0.25% of John's. Sally's wide spread sends balls past both limits. John's small spread keeps his balls inside only because his aim is just 1 inch off: move his aim to 33.8 and more than a quarter of his balls bounce above 34. Consistent is not enough; the line must also be accurate.</p>
+            </details>
+          </div>
+          <div class="predict">
+            <p><b>Then try.</b> Which line is easier to fix? Move John's aim to 32 inches.</p>
+            <details><summary>Show what happens</summary>
+              <p>John's. The aim is one machine setting. At 32 inches his line is both accurate and consistent, and practically no ball falls outside the limits (C<sub>pk</sub> = 2 / (3 × 0.35) = 1.90). Sally's line needs less variation, which usually means changing the process itself: materials, equipment, training. No single setting does that.</p>
+            </details>
+          </div>
+        </section>
+
+        <section role="tabpanel" id="panel-cap" aria-labelledby="tab-cap" hidden>
+          <p class="from-slide">On the slides: capability index C<sub>pk</sub> (slides 11–18)</p>
+          <h2>Is the line capable?</h2>
+          <p>A ball is a defect if it bounces outside 30–34 inches. Whether the line is capable comes down to two distances:</p>
+          <ul class="defs">
+            <li><b>Safety distance</b>: the room between the average bounce <span class="xm">X̄</span> and the nearer limit.</li>
+            <li><b>The mistake</b>: the distance from the average, in either direction, that balls stay within with a given probability (slide 13: k×σ, the actual deviation). 99.7% of balls stray less than 3σ, so at the 3σ level the mistake is 3σ.</li>
+          </ul>
+          <p>The line is <b>capable at the 3σ level</b> if the 3σ mistake fits inside the safety distance. Run the day, then click <b>Next</b> under the histogram to build the picture step by step.</p>
+          <div class="controls" data-controls="aim sd"></div>
+          <p class="label-sm">Moving a slider reruns Day 1 with the new setting, so the histogram and the picture update at once.</p>
+          <div class="predict">
+            <p><b>Predict, then run.</b> Let the day run. Will the 3σ mistake fit inside the safety distance?</p>
+            <details><summary>Show what happens</summary>
+              <p>No. Today <span class="xm">X̄</span> = 32.40 and σ = 0.80 inches. The nearer limit is UTL = 34, so the safety distance is 1.60 inches; the 3σ mistake is 3 × 0.80 = 2.40 inches. The mistake runs 0.80 inches past the upper limit: <b>not capable</b> at the 3σ level (C<sub>pk</sub> = 1.60 / 2.40 = 0.67). On the LTL side it just fits (2.40 = 2.40). In the histogram, 2 of the 100 balls bounce above 34; in the long run about 2.4% of balls fall outside the limits*.</p>
+            </details>
+          </div>
+          <div class="predict">
+            <p><b>Then try.</b> Move the aim to the target, 32 inches. Is the line capable now?</p>
+            <details><summary>Show what happens</summary>
+              <p>Not yet. Centering makes the safety distance 2.00 inches on both sides, but the 3σ mistake is still 2.40 inches (C<sub>pk</sub> = 2.00 / 2.40 = 0.83). Fewer balls fall outside (about 1.2% instead of 2.4%*), but the mistake still does not fit.</p>
+            </details>
+          </div>
+          <div class="predict">
+            <p><b>Then try.</b> Keep the aim at 32 and lower σ. How small must σ be for the 3σ mistake to fit?</p>
+            <details><summary>Show what happens</summary>
+              <p>The 3σ mistake must fit in the 2-inch safety distance: 3σ ≤ 2, so σ ≤ 2/3 = 0.666… inches (at σ = 0.67 the mistake is 2.01, just too long). At σ = 0.65 the mistake is 1.95 inches and fits (C<sub>pk</sub> = 2.00 / 1.95 = 1.03); only about 0.2% of balls fall outside*. A smaller σ means a smaller mistake: reducing variation (better materials, equipment, training) is what makes a line capable.</p>
+            </details>
+          </div>
+          <div class="fbox">
+            <h3>The formula (slides 11–12)</h3>
+            <p>A line is capable at the k×σ level if the k×σ mistake fits inside the limits on both sides:</p>
+            <p class="formula"><span class="xm">X̄</span> + k × σ ≤ UTL and <span class="xm">X̄</span> − k × σ ≥ LTL</p>
+            <p>The capability index puts this into one number:</p>
+            <p class="eq-big"><span class="sr-only">C<sub>pk</sub> = min{(X̄ − LTL) / (k × σ), (UTL − X̄) / (k × σ)}</span><span class="grp" aria-hidden="true"><span>C<sub>pk</sub> = min</span><span class="brace">{</span><span class="frac"><span>X̄ − LTL</span><span>k × σ</span></span>,<span class="frac"><span>UTL − X̄</span><span>k × σ</span></span><span class="brace">}</span></span></p>
+            <p>The tops are the room to each limit (the smaller one is the safety distance); the bottom is the k×σ mistake. C<sub>pk</sub> ≥ 1: capable at the k×σ level. C<sub>pk</sub> &lt; 1: not capable. On this tab, k = 3.</p>
+            <p class="formula" id="cap-plug"></p>
+          </div>
+          <p class="note-star">* The probability of a defect uses the normal curve, as in the starred question of the example (slide 16, solved on slide 18).</p>
+        </section>
+
+        <section role="tabpanel" id="panel-prac" aria-labelledby="tab-prac" hidden>
+          <p class="from-slide">Practice · not graded</p>
+          <h2>C<sub>pk</sub> practice</h2>
+          <div id="prac-q"></div>
+          <form id="prac-form" class="prac-form" novalidate>
+            <div class="prac-row"><label for="pa-safe">1. Safety distance (inches)</label><input id="pa-safe" type="text" inputmode="decimal" autocomplete="off"><span class="mark" id="pm-safe"></span></div>
+            <div class="prac-row"><label for="pa-kd">2. The mistake, <span class="pk">3σ</span> (inches)</label><input id="pa-kd" type="text" inputmode="decimal" autocomplete="off"><span class="mark" id="pm-kd"></span></div>
+            <fieldset class="prac-row"><legend>3. Capable at the <span class="pk">3σ</span> level?</legend><span class="opts"><label><input type="radio" name="pa-ok" value="yes"> Yes</label><label><input type="radio" name="pa-ok" value="no"> No</label></span><span class="mark" id="pm-ok"></span></fieldset>
+            <div class="prac-row"><label for="pa-cpk">4. C<sub>pk</sub> at the <span class="pk">3σ</span> level</label><input id="pa-cpk" type="text" inputmode="decimal" autocomplete="off"><span class="mark" id="pm-cpk"></span></div>
+            <div class="fbox">
+              <p><b>Formula (slide 12)</b>, here with k = <span class="pk-k">3</span>:</p>
+              <p class="eq-big"><span class="sr-only">C<sub>pk</sub> = min{(X̄ − LTL) / (k × σ), (UTL − X̄) / (k × σ)} = safety distance / mistake.</span><span class="grp" aria-hidden="true"><span>C<sub>pk</sub> = min</span><span class="brace">{</span><span class="frac"><span>X̄ − LTL</span><span>k × σ</span></span>,<span class="frac"><span>UTL − X̄</span><span>k × σ</span></span><span class="brace">}</span></span><span class="grp" aria-hidden="true">= <span class="frac"><span>safety distance</span><span>mistake</span></span></span></p>
+            </div>
+            <div class="row"><button class="btn primary" type="submit">Check</button><button class="btn" type="button" id="prac-new">New problem</button></div>
+          </form>
+          <div id="prac-fb" class="prac-fb" aria-live="polite"></div>
+          <p class="label-sm" id="prac-score"></p>
+          <p class="note-star">Round to two decimals; answers within 0.01 count as correct.</p>
+        </section>
+
+        <section role="tabpanel" id="panel-ctl" aria-labelledby="tab-ctl" hidden>
+          <p class="from-slide">On the slides: control charts (slides 20–22)</p>
+          <h2>Keep the line in control</h2>
+          <p>The plant has re-aimed the machine and improved the mold: average <b>32 inches</b>, σ = <b>0.5 inches</b>, so the line is capable (C<sub>pk</sub> = 2 / (3 × 0.5) = 1.33). Now the job is to keep it that way. Every hour, the average of the 10 tested balls goes on the control chart. The control limits come from how this line normally behaves.</p>
+          <p><b>The patterns on slides 21–22.</b> Use the buttons above the control chart: each one shows a day with that pattern and what caused it. The questions below let you make things go wrong yourself.</p>
+          <div class="predict">
+            <p><b>Predict, then run.</b> Let the line run with nothing going wrong. Do the hourly averages stay on the central line?</p>
+            <details><summary>Show what happens</summary>
+              <p>No. They move up and down around it, but stay inside the control limits with no pattern: normal behavior (slide 21). That movement is common-cause variation. Nothing needs fixing.</p>
+            </details>
+          </div>
+          <div class="predict">
+            <p><b>Predict.</b> Click <b>Bad plastic batch</b> under the factory. What will the chart show?</p>
+            <details><summary>Show what happens</summary>
+              <p>The next hour's average jumps above the upper control limit: one point out above (slide 21). Quality control investigates and finds the batch; once it is used up, the points return to normal.</p>
+            </details>
+          </div>
+          <div class="predict">
+            <p><b>Predict.</b> Click <b>Plant gets cold</b> and let it run a few hours.</p>
+            <details><summary>Show what happens</summary>
+              <p>The averages drop below the central line and stay there. After about five hours that is five in a row below the central line, a signal (slide 22); a point may also fall below the lower control limit. Look at the histogram: almost all balls are still within 30–34. The chart warns before the problem makes bad balls, so the plant can act in time. Click <b>Find the cause and fix it</b>.</p>
+            </details>
+          </div>
+          <div class="predict">
+            <p><b>Then try.</b> <b>Oven runs hot</b>, then (after fixing it) <b>New operator</b>. Give the new operator a day or two.</p>
+            <details><summary>Show what happens</summary>
+              <p>Oven runs hot: the averages climb hour after hour. Usually 2 to 4 hours after you click, a point goes above the upper control limit (slide 21); sometimes the last five points also form a rising trend (slide 22). New operator: the averages jump up and down. The first signal is usually one point outside a control limit, often within a couple of hours. Keep it running: usually within a day or two, points fall outside both control limits: erratic behavior (slide 22; the <b>Erratic</b> button above the chart shows such a day). The histogram widens and many balls fall outside 30–34.</p>
+            </details>
+          </div>
+          <div class="predict">
+            <p><b>Then try.</b> Click <b>Reset</b>, speed up, and let the line run for a week with nothing going wrong. Does the chart ever signal?</p>
+            <details><summary>Show what happens</summary>
+              <p>Yes, now and then (on this line, first on Day 5). Each hourly average lands above or below the central line by chance, like a coin toss, so five in a row on one side, or five steadily rising, sometimes happens in a perfectly normal line: in this factory, on about 4 days in 10. Quality control investigates and finds nothing: a <b>false alarm</b>. A longer rule, such as seven in a row, gives fewer false alarms but warns later; the slides use five.</p>
+            </details>
+          </div>
+          <div class="predict">
+            <p><b>Then try.</b> In control but not capable? <button class="btn" type="button" id="btn-capline">Load the Capability tab's line</button> (aim 32.4, σ = 0.8) and run a day with nothing going wrong.</p>
+            <details><summary>Show what happens</summary>
+              <p>The chart shows normal behavior all day: the line is <b>in control</b>. Yet 2 of the 100 tested balls bounce above 34 inches (about 2.4% in the long run*), so it is <b>not capable</b>. Control limits describe what the line normally does; the tolerance limits, 30 and 34, are what the customer requires. In control means only common causes are at work; capable means that common-cause variation fits the tolerance limits. This line needs a process change (aim and spread), not a hunt for special causes.</p>
+            </details>
+          </div>
+          <div class="controls" data-controls="aim sd"></div>
+          <p class="note-star">* The probability of a defect uses the normal curve, as in the starred question of the example (slide 16, solved on slide 18).</p>
+        </section>
+
+        <section role="tabpanel" id="panel-play" aria-labelledby="tab-play" hidden>
+          <p class="from-slide">Not graded · just for fun</p>
+          <h2>Playground</h2>
+          <p>Every setting in one place. Change anything while the line runs, or make something go wrong with the buttons under the factory.</p>
+          <div class="controls" data-controls="aim sd k"></div>
+          <h3>Challenges</h3>
+          <ul class="challenges">
+            <li>With σ = 0.8, is there any aim that makes the line capable at 3σ?
+              <details><summary>Show the answer</summary><p>No. The best you can do is aim at the middle, 32 inches, which gives C<sub>pk</sub> = 2 / (3 × 0.8) = 0.83. With this much variation, aiming cannot fix the line; only a smaller σ can.</p></details></li>
+            <li>Aim at 32.4 with σ = 0.8. Which bad ball is more common: too dead (below 30) or too bouncy (above 34)?
+              <details><summary>Show the answer</summary><p>Too bouncy, by far*: about 2.3% of balls bounce above 34 inches and about 0.1% below 30. The upper limit is only 2σ above the average (z = 2.0); the lower one is 3σ below it (z = −3.0).</p></details></li>
+            <li>Aim at 32 with σ = 0.5 and click Run 100 days. How many of the 10,000 tested balls fall outside 30–34?
+              <details><summary>Show the answer</summary><p>Hardly any. C<sub>pk</sub> = 1.33, so each limit is 4σ from the average; the normal curve* gives about 0.006% of balls, fewer than one ball in 10,000.</p></details></li>
+            <li>Can a line be capable but out of control?
+              <details><summary>Show the answer</summary><p>Yes. Aim at 32 with σ = 0.5 (capable, C<sub>pk</sub> = 1.33) and click Oven runs hot. Within a few hours the chart signals a problem, while almost every ball is still within 30–34. Capability is about how the process is designed; control is about running it day to day (slide 5). The chart lets the plant step in before the drift makes bad balls.</p></details></li>
+            <li>If a line is capable at the 3σ level, is it also capable at the 2σ level? And the other way round?
+              <details><summary>Show the answer</summary><p>Yes: the 2σ mistake is shorter than the 3σ mistake, so if 3σ fits inside the safety distance, 2σ fits too (C<sub>pk</sub> at 2σ is 1.5 times C<sub>pk</sub> at 3σ). The other way round, not necessarily. Aim at 32 with σ = 0.8: at the 2σ level C<sub>pk</sub> = 2 / (2 × 0.8) = 1.25, capable; at the 3σ level 2 / (3 × 0.8) = 0.83, not capable. Try both with the level k choice above.</p></details></li>
+          </ul>
+          <p class="note-star">* The probability of a defect uses the normal curve, as in the starred question of the example (slide 16, solved on slide 18).</p>
+        </section>
+      </div>
+    </aside>
+  </main>
+
+  <section class="how">
+    <details>
+      <summary>How this simulation works</summary>
+      <ul>
+        <li>Each ball's bounce height is random: a normal distribution with the machine's aim as its average and the ball-to-ball variation as its standard deviation. The molding machine makes 600 balls an hour (the moving balls are only a picture of that).</li>
+        <li>Quality control tests one ball every 6 minutes: 10 per hour, 100 per 10-hour day (7 am to 5 pm). The test follows the USA Pickleball rule: drop the ball from 78 inches onto a granite plate; it must bounce 30 to 34 inches.</li>
+        <li><span class="xm">X̄</span> and σ use the formulas on slide 10 (σ divides by N). C<sub>pk</sub> uses slides 11–13 with the k you choose. *The probability of a defect uses the normal curve, as in the starred question of the example (slide 16, solved on slide 18).</li>
+        <li>Control chart: one point per hour, the average of that hour's 10 tested balls. The central line is the machine's aim, and the control limits come from the line's normal variation, so they move only when you change the aim or σ, not when something goes wrong.</li>
+        <li>Signals (slides 21–22): a point above or below a control limit; five points in a row on one side of the central line; five points in a row each higher (or each lower) than the one before; erratic: among the last five points, at least one above the upper control limit and one below the lower control limit. Now and then a run or a trend of five happens by chance in a normal line; an investigation then finds nothing.</li>
+        <li>Special causes: bad plastic batch = the next hour's balls bounce 1.2 inches higher; plant gets cold = 0.3 inches lower; oven runs hot = 0.25 inches higher every hour, up to 3 inches; new operator = ball-to-ball variation 3 times larger. All but the batch last until you click Find the cause and fix it.</li>
+        <li>Pattern buttons (Control chart tab): each shows Day 1 of the line with aim 32 and σ = 0.5, with one cause (none for Normal) timed so the pattern ends at 5:00 pm. One point above: bad plastic batch from 4:00 pm. One point below: soft plastic batch from 4:00 pm (1.2 inches lower for one hour). Run: plant gets cold at noon. Trend: the air conditioning fails at noon (0.1 inches higher every hour, up to 1 inch). Erratic: new operator from 10:00 am. Their random numbers were picked so that each day shows its pattern and no unrelated signal; with other random numbers the same cause can look different.</li>
+        <li>C<sub>pk</sub> practice: each new problem runs one full day on a line with random settings; <span class="xm">X̄</span> and σ come from that day's 100 tested balls.</li>
+        <li>Run 100 days tests 10,000 balls with the current settings and no special causes, with the same random numbers every time. "Start over" goes back to Day 1 with the same balls; "New random balls" with new ones; "Reset" goes back to the tab's starting settings.</li>
+      </ul>
+    </details>
+  </section>
+</div>
+
+<script>
+(() => {
+'use strict';
+function showError(msg) {
+  const b = document.getElementById('boot-error');
+  if (b) { b.hidden = false; b.textContent = 'Something went wrong in the simulation: ' + (msg || 'unknown error') + '. Try reloading the page.'; }
+}
+window.addEventListener('error', (e) => {
+  // Errors with no line in this page are browser notices or other scripts (extensions), not the simulation.
+  if (!e.lineno) return;
+  showError(e.message);
+});
+
+/* ===== ENGINE START ===== */
+// One production line. Time unit = minutes from the start of Day 1 (the shift runs 10 hours a day, 7 am to 5 pm; nights are skipped).
+const SPEC = { ltl: 30, utl: 34, target: 32, drop: 78 };
+const TEST_EVERY = 6, PER_HOUR = 10, PER_DAY = 100, DAY_MIN = 600;
+const CAUSES = {
+  batch:    { label: 'Bad plastic batch', source: 'Materials' },
+  cold:     { label: 'Plant gets cold', source: 'Environment' },
+  mold:     { label: 'Oven runs hot', source: 'Machines' },          // the molding oven's heat drifts up
+  operator: { label: 'New operator', source: 'People' },
+  soft:     { label: 'Soft plastic batch', source: 'Materials' },       // used by the pattern buttons only
+  heat:     { label: 'Air conditioning fails', source: 'Environment' }  // used by the pattern buttons only
+};
+const EFFECT = { batch: 1.2, cold: -0.3, moldPerHour: 0.25, moldMax: 3, operator: 3, soft: -1.2, heatPerHour: 0.1, heatMax: 1 };
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function gauss(rng) { const u1 = 1 - rng(), u2 = rng(); return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2); }
+function normCdf(z) { // Abramowitz and Stegun 26.2.17, error below 1e-7
+  if (z < -9) return 0; if (z > 9) return 1;
+  const t = 1 / (1 + 0.2316419 * Math.abs(z));
+  const d = 0.3989422804014327 * Math.exp(-z * z / 2);
+  const q = d * t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+  return z > 0 ? 1 - q : q;
+}
+function statsOf(xs) { // slide 10: sigma divides by N
+  const n = xs.length; if (!n) return null;
+  let s = 0; for (const x of xs) s += x;
+  const mean = s / n; let v = 0, low = 0, high = 0;
+  for (const x of xs) { v += (x - mean) * (x - mean); if (x < SPEC.ltl) low++; else if (x > SPEC.utl) high++; }
+  return { n, mean, sd: Math.sqrt(v / n), low, high, out: low + high };
+}
+function cpkOf(mean, sd, k) {
+  if (!(sd > 0)) return { lo: Infinity, hi: Infinity, cpk: Infinity };
+  const lo = (mean - SPEC.ltl) / (k * sd), hi = (SPEC.utl - mean) / (k * sd);
+  return { lo, hi, cpk: Math.min(lo, hi) };
+}
+function pDefect(mean, sd) {
+  const zl = (SPEC.ltl - mean) / sd, zu = (SPEC.utl - mean) / sd;
+  const lo = normCdf(zl), hi = 1 - normCdf(zu);
+  return { zl, zu, lo, hi, p: lo + hi };
+}
+function limitsOf(p) { const h = 3 * p.sd / Math.sqrt(PER_HOUR); return { cl: p.aim, ucl: p.aim + h, lcl: p.aim - h }; }
+const dayOf = (t) => (t <= 0 ? 0 : Math.floor((t - 1e-9) / DAY_MIN));
+
+function checkRules(H) { // slides 21-22; flags go on the newest point
+  const n = H.length, cur = H[n - 1];
+  if (cur.xbar > cur.ucl) cur.flags.push('above');
+  if (cur.xbar < cur.lcl) cur.flags.push('below');
+  if (n >= 5) {
+    const L5 = H.slice(-5);
+    if (L5.every((h) => h.xbar > h.cl)) cur.flags.push('runAbove');
+    if (L5.every((h) => h.xbar < h.cl)) cur.flags.push('runBelow');
+    let up = true, dn = true;
+    for (let i = 1; i < 5; i++) {
+      if (!(L5[i].xbar > L5[i - 1].xbar)) up = false;
+      if (!(L5[i].xbar < L5[i - 1].xbar)) dn = false;
+    }
+    if (up) cur.flags.push('trendUp');
+    if (dn) cur.flags.push('trendDown');
+    if (L5.some((h) => h.xbar > h.ucl) && L5.some((h) => h.xbar < h.lcl)) cur.flags.push('erratic');   // slide 22: swings beyond both limits
+    if (cur.flags.some((f) => f !== 'above' && f !== 'below')) cur.span = 5;
+  }
+}
+
+class Line {
+  constructor(p, seed) { this.p = Object.assign({}, p); this.seed = seed; this.reset(); }
+  reset() { this.rng = mulberry32(this.seed); this.t = 0; this.k = 0; this.tests = []; this.hours = []; this.causes = []; this.days = []; this.hourP = null; }
+  setParams(p) { this.p = Object.assign({}, p); }
+  addCause(kind) { // a plastic batch hits the next full hour and lasts one hour; the others start now
+    const oneHour = kind === 'batch' || kind === 'soft', start = oneHour ? Math.ceil((this.t - 1e-6) / 60) * 60 : this.t;
+    this.causes.push({ kind, start, end: oneHour ? start + 60 : null });
+  }
+  fixAll() { for (const c of this.causes) if (c.end === null || c.end > this.t) c.end = Math.max(this.t, c.start); }
+  active(t) { return this.causes.filter((c) => t > c.start && (c.end === null || t <= c.end)); }
+  meanSd(t) {
+    let m = this.p.aim, s = this.p.sd;
+    for (const c of this.active(t)) {
+      if (c.kind === 'batch') m += EFFECT.batch;
+      else if (c.kind === 'cold') m += EFFECT.cold;
+      else if (c.kind === 'mold') m += Math.min(EFFECT.moldMax, EFFECT.moldPerHour * (t - c.start) / 60);
+      else if (c.kind === 'operator') s *= EFFECT.operator;
+      else if (c.kind === 'soft') m += EFFECT.soft;
+      else if (c.kind === 'heat') m += Math.min(EFFECT.heatMax, EFFECT.heatPerHour * (t - c.start) / 60);
+    }
+    return { m, s };
+  }
+  advance(T) { // one standard normal per test, so the same seed gives the same balls whatever the settings
+    while ((this.k + 1) * TEST_EVERY <= T + 1e-9) {
+      this.k++;
+      if (this.k % PER_HOUR === 1) this.hourP = Object.assign({}, this.p);   // the hour's limits use the settings at its start
+      const t = this.k * TEST_EVERY, z = gauss(this.rng), ms = this.meanSd(t);
+      this.tests.push({ t, x: ms.m + ms.s * z, day: dayOf(t) });
+      if (this.k % PER_HOUR === 0) this.closeHour(t);
+      if (this.k % PER_DAY === 0) this.days.push(statsOf(this.tests.slice(-PER_DAY).map((o) => o.x)));
+    }
+    this.t = Math.max(this.t, T);
+  }
+  closeHour(t) {
+    const xs = this.tests.slice(-PER_HOUR).map((o) => o.x);
+    let s = 0; for (const x of xs) s += x;
+    this.hours.push(Object.assign({ i: this.hours.length, t, day: dayOf(t), xbar: s / xs.length, flags: [], span: 0 }, limitsOf(this.hourP || this.p)));
+    checkRules(this.hours);
+  }
+  testsOfDay(d) { return this.tests.filter((o) => o.day === d); }
+}
+// Pattern buttons (slides 21-22): Day 1 of the control-chart line with one cause, timed so the pattern ends at 5:00 pm.
+// The seeds were picked so that each day shows its pattern and no other signal.
+const PATTERNS = {
+  normal:  { seed: 1320, causes: [] },
+  above:   { seed: 118, causes: [['batch', 540, 600]] },        // 4:00 to 5:00 pm
+  below:   { seed: 118, causes: [['soft', 540, 600]] },
+  run:     { seed: 488, causes: [['cold', 300, null]] },          // from noon
+  trend:   { seed: 10570, causes: [['heat', 300, null]] },
+  erratic: { seed: 118, causes: [['operator', 180, null]] }       // from 10:00 am
+};
+function patternLine(key, p) {
+  const pat = PATTERNS[key], ln = new Line(p, pat.seed);
+  ln.causes = pat.causes.map(([kind, start, end]) => ({ kind, start, end }));
+  ln.advance(DAY_MIN);
+  return ln;
+}
+function longRun(p, days, seed) {
+  const rng = mulberry32(seed), xs = new Array(days * PER_DAY);
+  for (let i = 0; i < xs.length; i++) xs[i] = p.aim + p.sd * gauss(rng);
+  return xs;
+}
+/* ===== ENGINE END ===== */
+
+// ---------- helpers
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const f2 = (x) => (isFinite(x) ? x.toFixed(2) : '–');
+const int = (x) => Math.round(x).toLocaleString('en-US');
+const minus = (s) => String(s).replace(/^-/, '−');
+const n2 = (x) => minus(f2(x));
+function cpkShown(m, sd, k) {   // m and sd already rounded to 2 decimals; same arithmetic as a hand calculation
+  const kd = Number(f2(k * sd)); if (!(kd > 0)) return { lo: Infinity, hi: Infinity, cpk: Infinity };
+  const lo = Number(f2(m - SPEC.ltl)) / kd, hi = Number(f2(SPEC.utl - m)) / kd;
+  return { lo, hi, cpk: Math.min(lo, hi) };
+}
+function pctTxt(p) { const v = p * 100; if (!isFinite(v)) return '–'; if (v === 0) return '0%'; if (v < 0.01) return '<0.01%'; if (v < 1) return v.toFixed(2) + '%'; return v.toFixed(1) + '%'; }
+function clockOf(t) {
+  const d = dayOf(t), m = t - d * DAY_MIN, h = 7 + Math.floor(m / 60), mm = Math.floor(m % 60);
+  const h12 = h > 12 ? h - 12 : h;
+  return { day: d + 1, txt: h12 + ':' + String(mm).padStart(2, '0') + (h >= 12 ? ' pm' : ' am') };
+}
+const reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const FLAG_TEXT = {
+  above: 'a point above the upper control limit',
+  below: 'a point below the lower control limit',
+  runAbove: 'five points in a row above the central line',
+  runBelow: 'five points in a row below the central line',
+  trendUp: 'five points in a row, each higher than the one before (a trend)',
+  trendDown: 'five points in a row, each lower than the one before (a trend)',
+  erratic: 'erratic behavior: points jumping above and below the control limits'
+};
+
+// ---------- state
+const SPEEDS = [0.5, 1, 2, 5, 10, 20, 30, 60, 120]; // simulated minutes per real second
+const SPEED_LABELS = ['30 seconds', '1 minute', '2 minutes', '5 minutes', '10 minutes', '20 minutes', '30 minutes', '1 hour', '2 hours'];
+const PRESETS = {
+  acc:  { two: true,  ps: [{ aim: 33.0, sd: 0.35 }, { aim: 32.0, sd: 0.9 }], seeds: [215, 5740], k: 3, speed: 3, pause: true },
+  cap:  { two: false, ps: [{ aim: 32.4, sd: 0.8 }], seeds: [3831], k: 3, speed: 3, pause: true },
+  ctl:  { two: false, ps: [{ aim: 32.0, sd: 0.5 }], seeds: [1320], k: 3, speed: 4, pause: false },
+  play: { two: false, ps: [{ aim: 32.4, sd: 0.8 }], seeds: [3831], k: 3, speed: 3, pause: false }
+};
+const LONG_DAYS = 100, LONG_SEED = 2026;
+const NAMES = ["John's line", "Sally's line"];
+const S = { tab: 'acc', two: true, k: 3, speedIdx: 3, pause: true, playing: false, shift: 0, histSrc: 'today' };
+let lines = [], seeds = [], anims = [], longRes = null, dirty = true, patCur = null;
+
+function makeLines(ps, sds) {
+  seeds = sds.slice();
+  lines = ps.map((p, i) => new Line(p, seeds[i] + S.shift));
+  anims = lines.map(() => ({ seen: 0, cur: null, readings: [], belt: [], gap: 0 }));
+  longRes = null; dirty = true; renderLong();
+  if (S.histSrc === 'long') { S.histSrc = 'today'; syncHistButtons(); }
+  patCur = null; syncPattern();
+}
+function restart() { lines.forEach((ln) => ln.reset()); anims = lines.map(() => ({ seen: 0, cur: null, readings: [], belt: [], gap: 0 })); dirty = true; patCur = null; syncPattern(); }
+function finishedAnims() {   // anims for lines that already ran: no drop animations, the last readings on the gauge
+  return lines.map((ln) => ({ seen: ln.tests.length, cur: null, readings: ln.tests.slice(-12).map((o) => ({ x: o.x, ok: o.x >= SPEC.ltl && o.x <= SPEC.utl, t: o.t })), belt: [], gap: 0 }));
+}
+function rerunDay1() {   // capability tab: show a full day at the new setting right away
+  lines.forEach((ln) => { ln.reset(); ln.advance(DAY_MIN); });
+  anims = finishedAnims(); setPlaying(false); dirty = true; updateLive();
+}
+
+// ---------- controls
+const CTRL = {
+  aim: (id) => `<div class="ctl"><div class="ctl-top"><label for="${id}">Machine aim: average bounce</label><output for="${id}" data-out="aim"></output></div>
+    <input type="range" id="${id}" data-param="aim" data-line="0" min="30" max="34" step="0.1"><p class="ctl-hint">Where the machine is set. Re-aiming is one setting.</p></div>`,
+  sd: (id) => `<div class="ctl"><div class="ctl-top"><label for="${id}">Ball-to-ball variation σ</label><output for="${id}" data-out="sd"></output></div>
+    <input type="range" id="${id}" data-param="sd" data-line="0" min="0.2" max="1.5" step="0.05"><p class="ctl-hint">The machine's standard deviation. Lowering it takes a better process.</p></div>`,
+  johnAim: (id) => `<div class="ctl"><div class="ctl-top"><label for="${id}">John's aim</label><output for="${id}" data-out="johnAim"></output></div>
+    <input type="range" id="${id}" data-param="aim" data-line="0" min="31" max="34" step="0.1"><p class="ctl-hint">John's σ stays at 0.35 inches.</p></div>`,
+  sallySd: (id) => `<div class="ctl"><div class="ctl-top"><label for="${id}">Sally's variation σ</label><output for="${id}" data-out="sallySd"></output></div>
+    <input type="range" id="${id}" data-param="sd" data-line="1" min="0.3" max="1.2" step="0.05"><p class="ctl-hint">Sally's aim stays at 32 inches.</p></div>`,
+  k: (id) => `<fieldset class="ctl"><legend>Level k for C<sub>pk</sub></legend><div class="kpick">
+    ${[1, 2, 3].map((k) => `<label><input type="radio" name="${id}" value="${k}" data-k> ${k}σ</label>`).join('')}</div></fieldset>`
+};
+function buildControls() {
+  let n = 0;
+  $$('[data-controls]').forEach((box) => {
+    const prefix = box.closest('[role="tabpanel"]').id.replace('panel-', '');
+    box.innerHTML = box.dataset.controls.split(' ').map((k) => CTRL[k](prefix + '-' + k + '-' + (n++))).join('');
+  });
+}
+function syncControls() {
+  $$('[data-param]').forEach((el) => {
+    const ln = lines[Number(el.dataset.line)];
+    if (!ln) return;
+    el.value = String(ln.p[el.dataset.param]);
+  });
+  $$('[data-k]').forEach((el) => { el.checked = Number(el.value) === S.k; });
+  const outs = {
+    aim: lines[0] ? lines[0].p.aim.toFixed(1) + ' in' : '',
+    sd: lines[0] ? lines[0].p.sd.toFixed(2) + ' in' : '',
+    johnAim: lines[0] ? lines[0].p.aim.toFixed(1) + ' in' : '',
+    sallySd: lines[1] ? lines[1].p.sd.toFixed(2) + ' in' : ''
+  };
+  Object.keys(outs).forEach((k) => $$('[data-out="' + k + '"]').forEach((el) => { el.textContent = outs[k]; }));
+  $('#speed').value = String(S.speedIdx);
+  $('#speed-out').textContent = '1 second = ' + SPEED_LABELS[S.speedIdx];
+  $('#speed').setAttribute('aria-valuetext', '1 second = ' + SPEED_LABELS[S.speedIdx]);
+  $('#pause-day').checked = S.pause;
+}
+function onControl(e) {
+  const el = e.target;
+  if (el.matches('[data-param]')) {
+    const ln = lines[Number(el.dataset.line)];
+    if (!ln) return;
+    const p = Object.assign({}, ln.p); p[el.dataset.param] = Number(el.value); ln.setParams(p); clearPattern();
+    if (S.tab === 'cap') rerunDay1();
+    if (longRes) { longRes = null; if (S.histSrc === 'long') S.histSrc = 'today'; syncHistButtons(); $('#long-result').textContent = 'Settings changed: click Run 100 days again for the new settings.'; }
+    syncControls(); dirty = true;
+  } else if (el.matches('[data-k]') && el.checked) { S.k = Number(el.value); syncControls(); renderLong(); dirty = true; }
+  else if (el.id === 'speed') { S.speedIdx = Number(el.value); syncControls(); }
+  else if (el.id === 'pause-day') { S.pause = el.checked; }
+}
+document.addEventListener('input', onControl);
+document.addEventListener('change', onControl);
+
+// ---------- tabs
+const TAB_KEYS = ['acc', 'cap', 'prac', 'ctl', 'play'];
+function loadPreset(key) {
+  const pre = PRESETS[key];
+  S.shift = 0;   // the tab's example always starts from its own random numbers
+  S.two = pre.two; S.k = pre.k; S.speedIdx = pre.speed; S.pause = pre.pause; S.histSrc = 'today';
+  makeLines(pre.ps, pre.seeds);
+}
+function selectTab(key, opts) {
+  opts = opts || {};
+  if (key === S.tab && !opts.force) { if (opts.focus) $('#tab-' + key).focus(); return; }   // the open tab keeps its state
+  const prev = S.tab;
+  S.tab = key; document.body.dataset.tab = key;
+  S.sceneLabel = null; CMP.prob = null;
+  TAB_KEYS.forEach((k) => {
+    const t = $('#tab-' + k), pnl = $('#panel-' + k), on = k === key;
+    t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1; pnl.hidden = !on;
+  });
+  // The Playground keeps the current one-line factory; every other tab starts from its own settings.
+  if (key === 'prac') { if (PR.cur) restoreProblem(); else newProblem(); }
+  else if (opts.load !== false && !(key === 'play' && !S.two && lines.length && prev !== 'prac')) loadPreset(key);
+  if (key === 'cap') { CMP.step = 1; CMP.t0 = performance.now() / 1000; cmpSyncNav(); }
+  $('#cause-row').hidden = !(key === 'ctl' || key === 'play');
+  const capLike = key === 'cap' || key === 'prac';   // the capability tabs leave the control chart for later
+  $('#ctl-card').hidden = S.two || capLike;
+  ['#st-lastx', '#st-chart'].forEach((id) => { $(id).closest('.tile').hidden = capLike; });
+  $('.stats').classList.toggle('four', capLike);
+  cmpCard.hidden = !(key === 'cap' || (key === 'prac' && PR.checked));
+  syncControls(); syncHistButtons(); updateCauses(); updateLive(); dirty = true;
+  if (opts.focus) $('#tab-' + key).focus();
+  try { history.replaceState(null, '', '#' + key); } catch (err) { /* ignore */ }
+}
+$$('[role="tab"]').forEach((t) => {
+  t.addEventListener('click', () => selectTab(t.id.replace('tab-', '')));
+  t.addEventListener('keydown', (e) => {
+    const i = TAB_KEYS.indexOf(t.id.replace('tab-', ''));
+    let j = -1;
+    if (e.key === 'ArrowRight') j = (i + 1) % TAB_KEYS.length;
+    else if (e.key === 'ArrowLeft') j = (i + TAB_KEYS.length - 1) % TAB_KEYS.length;
+    else if (e.key === 'Home') j = 0; else if (e.key === 'End') j = TAB_KEYS.length - 1;
+    if (j >= 0) { e.preventDefault(); selectTab(TAB_KEYS[j], { focus: true }); }
+  });
+});
+function syncHistButtons() {
+  $$('[data-hist-src]').forEach((b) => {
+    const src = b.dataset.histSrc;
+    b.setAttribute('aria-pressed', String(src === S.histSrc));
+    if (src === 'long') { b.disabled = !longRes; b.title = longRes ? '' : 'Click Run 100 days first'; }
+  });
+}
+document.addEventListener('click', (e) => {
+  const h = e.target.closest('[data-hist-src]');
+  if (h && !h.disabled) { S.histSrc = h.dataset.histSrc; syncHistButtons(); dirty = true; }
+  const c = e.target.closest('[data-cause]');
+  if (c && lines[0] && !S.two) {
+    const ln = lines[0], kind = c.dataset.cause;
+    const going = ln.causes.some((q) => q.kind === kind && (q.end === null || q.end > ln.t) && !(q.end !== null && q.end <= q.start));
+    if (!going) ln.addCause(kind);   // clicking it again while it is still going wrong changes nothing
+    clearPattern(); updateCauses(); if (!S.playing) setPlaying(true);
+  }
+});
+
+// ---------- transport
+function setPlaying(on) { S.playing = on; $('#btn-play').textContent = on ? 'Pause' : 'Play'; }
+$('#btn-play').addEventListener('click', () => { if (!S.playing) clearPattern(); setPlaying(!S.playing); });
+$('#btn-restart').addEventListener('click', () => { restart(); updateCauses(); updateLive(); });
+$('#btn-newnums').addEventListener('click', () => {
+  S.shift = 1 + Math.floor(Math.random() * 99999);
+  makeLines(lines.map((ln) => ln.p), seeds); syncHistButtons(); updateCauses(); updateLive();
+});
+$('#btn-defaults').addEventListener('click', () => {
+  S.shift = 0; loadPreset(S.tab);
+  syncControls(); syncHistButtons(); updateCauses(); updateLive();
+});
+$('#btn-capline').addEventListener('click', () => {
+  S.shift = 0; S.histSrc = 'today'; makeLines(PRESETS.cap.ps, PRESETS.cap.seeds);
+  syncControls(); syncHistButtons(); updateCauses(); updateLive(); setPlaying(true);
+});
+$('#btn-fix').addEventListener('click', () => { if (lines[0]) { lines[0].fixAll(); clearPattern(); updateCauses(); } });
+$('#btn-long').addEventListener('click', () => {
+  longRes = lines.map((ln, i) => {
+    const xs = longRun(ln.p, LONG_DAYS, LONG_SEED);   // same random numbers for every line and every run
+    return { p: Object.assign({}, ln.p), xs, st: statsOf(xs) };
+  });
+  S.histSrc = 'long'; syncHistButtons(); dirty = true; renderLong();
+});
+// ---------- pattern buttons (control chart tab, slides 21-22)
+const PAT_TEXT = {
+  normal: '<b>Normal behavior</b> (slide 21). Nothing goes wrong all day. The hourly averages move up and down around the central line and stay inside the control limits, with no pattern: only common causes are at work. Nothing to fix.',
+  above: '<b>One point out above</b> (slide 21). At 4:00 pm a bad plastic batch reaches the molding machine, and that hour\'s balls bounce about 1.2 inches higher. The 5:00 pm point jumps above the upper control limit. Investigate for the cause of the poor performance.',
+  below: '<b>One point out below</b> (slide 21). At 4:00 pm a soft plastic batch reaches the molding machine, and that hour\'s balls bounce about 1.2 inches lower. The 5:00 pm point drops below the lower control limit. Investigate for the cause of the low value.',
+  run: '<b>Run of five below the central line</b> (slide 22). At noon the plant gets cold, and the balls bounce about 0.3 inches lower. Every point stays inside the control limits, but the last five (1:00 to 5:00 pm) are all below the central line. Investigate for the cause of the sustained poor performance.',
+  trend: '<b>Trend</b> (slide 22). At noon the air conditioning fails. As the plant warms up, the balls bounce about 0.1 inches higher every hour. The five points from 1:00 to 5:00 pm climb step by step, still inside the control limits. Investigate for the cause of the progressive change.',
+  erratic: '<b>Erratic behavior</b> (slide 22). At 10:00 am a new operator takes over, and the ball-to-ball variation triples. From 11:00 am on, the hourly averages jump above and below the control limits. Investigate.'
+};
+function clearPattern() { if (patCur) { patCur = null; syncPattern(); } }
+function syncPattern() {
+  $$('[data-pattern]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.pattern === patCur)));
+  const el = $('#pat-text'); el.hidden = !patCur; el.innerHTML = patCur ? PAT_TEXT[patCur] : '';
+}
+function showPattern(key) {   // the whole day at once, like the slide pictures
+  S.shift = 0; S.histSrc = 'today';
+  makeLines(PRESETS.ctl.ps, [PATTERNS[key].seed]);
+  lines[0] = patternLine(key, PRESETS.ctl.ps[0]);
+  anims = finishedAnims(); setPlaying(false);
+  patCur = key; syncPattern();
+  syncControls(); syncHistButtons(); updateCauses(); updateLive(); dirty = true;
+}
+$$('[data-pattern]').forEach((b) => b.addEventListener('click', () => showPattern(b.dataset.pattern)));
+function renderLong() {   // from the rounded X̄ and σ shown, like every other C_pk on the page
+  const el = $('#long-result');
+  if (!longRes) { el.textContent = 'No 100-day run yet.'; return; }
+  el.innerHTML = longRes.map((r, i) => {
+    const m = Number(f2(r.st.mean)), sd = Number(f2(r.st.sd)), c = cpkShown(m, sd, S.k), d = pDefect(m, sd);
+    return (S.two ? '<b>' + NAMES[i] + ':</b> ' : '<b>100 days, 10,000 tested balls:</b> ') +
+      '<span class="xm">X̄</span> = ' + f2(m) + ' in, σ = ' + f2(sd) + ' in, C<sub>pk</sub> at ' + S.k + 'σ = ' + f2(c.cpk) +
+      '; outside 30–34: ' + int(r.st.out) + ' balls (' + pctTxt(r.st.out / r.st.n) + '); normal curve*: ' + pctTxt(d.p) + '.';
+  }).join('<br>');
+}
+function updateCauses() {
+  const el = $('#active-causes');
+  if (S.two || !lines[0]) { el.hidden = true; return; }
+  const ln = lines[0], t = ln.t;
+  const act = ln.causes.filter((c) => (c.end === null || c.end > t) && !(c.end !== null && c.end <= c.start));   // a batch fixed before it started is not going wrong
+  if (!act.length) { el.hidden = true; return; }
+  el.hidden = false;
+  el.textContent = 'Going wrong now: ' + act.map((c) => {
+    const ck = clockOf(c.start + 1e-6), when = c.start > t || (c.kind === 'batch' && c.start >= t) ? 'starts ' : 'since ';   // +1e-6: a start at 5:00 pm is the next day's 7:00 am
+    return CAUSES[c.kind].label + ' (' + when + 'Day ' + ck.day + ', ' + ck.txt + ')';
+  }).join('; ') + '.';
+}
+
+// ---------- live numbers
+const MADE_PER_MIN = 10;
+function curDay() { return lines[0] ? dayOf(lines[0].t) : 0; }
+function lastAlarm(ln) {
+  for (let i = ln.hours.length - 1; i >= 0; i--) if (ln.hours[i].flags.length) return ln.hours[i];
+  return null;
+}
+function updateLive() {
+  if (!lines.length) return;
+  const ln0 = lines[0], t = ln0.t, d = curDay(), ck = clockOf(t), inDay = t - d * DAY_MIN;
+  $('#st-clock').textContent = 'Day ' + ck.day + ' · ' + ck.txt;
+  $('#st-made').textContent = int(Math.floor(inDay * MADE_PER_MIN) * lines.length);
+  $('#st-made-s').textContent = S.two ? '600 per hour on each line' : '600 per hour';
+  const today = lines.map((ln) => ln.testsOfDay(d));
+  $('#st-tested').textContent = (S.two ? today.map((x) => x.length).join(' + ') : today[0].length) + ' of ' + PER_DAY * lines.length;
+  const outEl = $('#st-out');
+  if (S.two) {
+    outEl.className = 'v small';
+    outEl.textContent = today.map((x, i) => NAMES[i].split("'")[0] + ' ' + x.filter((o) => o.x < SPEC.ltl || o.x > SPEC.utl).length).join(' · ');
+    $('#st-out-s').textContent = 'tested balls outside the limits';
+  } else {
+    const n = today[0].length, o = today[0].filter((q) => q.x < SPEC.ltl || q.x > SPEC.utl).length;
+    outEl.className = 'v' + (o ? ' bad' : '');
+    outEl.textContent = n ? o + ' (' + pctTxt(o / n) + ')' : '–';
+    $('#st-out-s').textContent = n ? 'of ' + n + ' tested balls' : 'of the tested balls';
+  }
+  const lx = $('#st-lastx');
+  if (S.two) {
+    lx.className = 'v small';
+    lx.textContent = lines.map((ln, i) => NAMES[i].split("'")[0] + ' ' + (ln.hours.length ? f2(ln.hours[ln.hours.length - 1].xbar) : '–')).join(' · ');
+    $('#st-lastx-s').textContent = 'inches, average of 10 tested balls';
+  } else {
+    lx.className = 'v';
+    const h = ln0.hours[ln0.hours.length - 1];
+    lx.textContent = h ? f2(h.xbar) + ' in' : '–';
+    if (h) { const a = clockOf(h.t - 60 + 1e-6), b = clockOf(h.t); $('#st-lastx-s').textContent = 'Day ' + a.day + ', ' + a.txt + ' to ' + b.txt; }
+    else $('#st-lastx-s').textContent = 'average of its 10 tested balls';
+  }
+  const chart = $('#st-chart'), cs = $('#st-chart-s');
+  if (S.two) { chart.className = 'v small'; chart.textContent = 'not used'; cs.textContent = 'on this tab'; }
+  else {
+    const h = ln0.hours[ln0.hours.length - 1];
+    if (!h) { chart.className = 'v'; chart.textContent = '–'; cs.textContent = 'first point at 8:00 am'; }
+    else if (h.flags.length) { chart.className = 'v bad'; chart.textContent = 'Investigate'; cs.textContent = 'latest point signals a problem'; }
+    else { chart.className = 'v ok'; chart.textContent = 'In control'; cs.textContent = 'latest point: normal behavior'; }
+  }
+  // status line
+  const st = $('#status');
+  const parts = lines.map((ln, i) => {
+    const an = anims[i], r = an.readings[an.readings.length - 1];
+    if (!r) return null;
+    const ok = r.x >= SPEC.ltl && r.x <= SPEC.utl;
+    return (S.two ? NAMES[i] + ': latest ball' : 'Latest tested ball') + ' bounced <b>' + r.x.toFixed(1) + ' inches</b>, ' +
+      (ok ? 'within 30–34' : (r.x > SPEC.utl ? 'too bouncy, outside 30–34' : 'too dead, outside 30–34'));
+  }).filter(Boolean);
+  st.innerHTML = 'Day ' + ck.day + ', ' + ck.txt + (inDay >= DAY_MIN - 1e-6 && t > 0 ? ' (shift over)' : '') + '. ' +
+    (parts.length ? parts.join('. ') + '.' : 'Quality control tests the first ball at 7:06 am.');
+  // alarm line
+  const al = $('#alarm');
+  if (!S.two) {
+    const h = lastAlarm(ln0), last = ln0.hours[ln0.hours.length - 1];
+    let cls = 'alarm', txt;
+    if (!last) txt = 'No points yet: the first hourly average appears at 8:00 am.';
+    else if (last.flags.length) {
+      const c = clockOf(last.t);
+      cls = 'alarm bad';
+      txt = 'Signal at Day ' + c.day + ', ' + c.txt + ': ' + last.flags.map((f) => FLAG_TEXT[f]).join('; ') + '. Investigate.';
+    } else txt = 'Latest point: normal behavior.' + (h ? ' Last signal: Day ' + clockOf(h.t).day + ', ' + clockOf(h.t).txt + ' (' + FLAG_TEXT[h.flags[0]] + ').' : '');
+    if (al.textContent !== txt) al.textContent = txt;   // a live region: rewrite only when the message changes
+    if (al.className !== cls) al.className = cls;
+  }
+  updateCauses();
+}
+
+// ---------- theme colors for the canvases
+const C = {};
+function readTheme() {
+  const cs = getComputedStyle(document.documentElement);
+  ['bg', 'surface', 'surface-2', 'ink', 'ink-2', 'muted', 'rule', 'accent', 'accent-soft', 'gold', 'danger', 'danger-soft', 'good', 'ctl', 'pt-line', 'john', 'sally',
+   'ball', 'ball-edge', 'ball-hole', 'plant-wall', 'plant-wall-2', 'plant-floor', 'belt', 'belt-2', 'machine', 'machine-2', 'machine-ink', 'tower', 'plate', 'crate', 'gauge-bg']
+    .forEach((n) => { C[n.replace(/-(\w)/g, (_, a) => a.toUpperCase())] = cs.getPropertyValue('--' + n).trim(); });
+  dirty = true;
+}
+try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readTheme); } catch (err) { /* older browsers */ }
+new MutationObserver(readTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+// ---------- scene
+const scene = $('#scene'), g = scene.getContext('2d');
+const SL = { W: 780, H: 300, SC: 1, DPR: 1 };
+function layoutScene() {
+  const cssW = scene.parentElement.clientWidth || 800;
+  SL.compact = cssW < 560;   // phones: only the drop tower and the gauge, drawn at full size
+  SL.SC = SL.compact ? Math.min(1.35, cssW / 330) : Math.max(0.5, Math.min(1.35, cssW / 780));
+  SL.W = cssW / SL.SC; SL.H = S.two ? (SL.compact ? 520 : 400) : 300;
+  SL.DPR = window.devicePixelRatio || 1;
+  scene.style.height = (SL.H * SL.SC) + 'px';
+  scene.width = Math.round(cssW * SL.DPR); scene.height = Math.round(SL.H * SL.SC * SL.DPR);
+}
+function font(w, px, fam) { px = Math.max(px, 9 / SL.SC); g.font = w + ' ' + px + 'px ' + (fam === 'mono' ? '"IBM Plex Mono", ui-monospace, Menlo, monospace' : fam === 'disp' ? 'Archivo, "Arial Narrow", sans-serif' : '"Atkinson Hyperlegible", system-ui, sans-serif'); }
+function rr(x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+function pill(x, y, text, bg, fg, size, align) {
+  font(700, size || 11, 'mono'); const tw = g.measureText(text).width, pw = tw + 12, ph = (size || 11) + 8;
+  const x0 = align === 'right' ? x - pw : align === 'left' ? x : x - pw / 2;
+  g.fillStyle = bg; rr(x0, y - ph / 2, pw, ph, ph / 2); g.fill();
+  g.fillStyle = fg; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(text, x0 + 6, y + 0.5);
+}
+function ball(x, y, r, alpha, plain) {   // plain = straight from the mold, before the holes are drilled
+  g.globalAlpha = alpha === undefined ? 1 : alpha;
+  g.fillStyle = C.ball; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
+  g.strokeStyle = C.ballEdge; g.lineWidth = 1; g.stroke();
+  if (plain) { g.globalAlpha = 1; return; }
+  g.fillStyle = C.ballHole;
+  for (const [dx, dy] of [[-0.38, -0.3], [0.36, -0.28], [0, 0.42], [-0.42, 0.28], [0.42, 0.3], [0, -0.02]]) { g.beginPath(); g.arc(x + dx * r, y + dy * r, r * 0.14, 0, 7); g.fill(); }
+  g.globalAlpha = 1;
+}
+function dropDuration() { // real seconds for one drop test animation
+  if (reduceMotion) return 0;
+  const gapReal = TEST_EVERY / SPEEDS[S.speedIdx];
+  return Math.min(1.4, gapReal * 0.85);
+}
+function consumeTests(now) {
+  lines.forEach((ln, i) => {
+    const an = anims[i];
+    while (an.seen < ln.tests.length) {
+      const o = ln.tests[an.seen++];
+      if (an.cur) finishAnim(an);
+      const dur = an.seen < ln.tests.length ? 0 : dropDuration();   // only the newest ball is animated
+      const r = { x: o.x, ok: o.x >= SPEC.ltl && o.x <= SPEC.utl, t: o.t };
+      if (dur < 0.3) { an.readings.push(r); if (an.readings.length > 12) an.readings.shift(); }
+      else an.cur = Object.assign(r, { t0: now, dur });
+    }
+  });
+}
+function finishAnim(an) { an.readings.push(an.cur); if (an.readings.length > 12) an.readings.shift(); an.cur = null; }
+
+function drawLane(i, top, Hl, time, dt) {
+  const ln = lines[i], an = anims[i], W = SL.W, f = Hl / 300, fs = Math.max(0.78, f) * (SL.compact ? 1.2 : 1);
+  const floorY = top + Hl - 18 * f, beltY = floorY - 70 * f, bx0 = 118, bx1 = SL.compact ? 0 : Math.max(260, W - 352);
+  const towerX = W - 250, topY = top + (SL.compact ? 44 : 26) * f, plateY = floorY - 8 * f, ppi = (plateY - topY) / SPEC.drop;
+  const gW = 70, gX = W - 150, gTop = top + (SL.compact ? 56 : 40) * f, gBot = floorY - 34 * f, gIn = (gBot - gTop) / 8;
+  const GY = (v) => gBot - (Math.max(28, Math.min(36, v)) - 28) * gIn;
+  const TY = (v) => plateY - v * ppi;
+  // wall and floor
+  g.fillStyle = C.plantWall; g.fillRect(0, top, W, Hl);
+  g.strokeStyle = C.plantWall2; g.lineWidth = 2;
+  for (let x = 60; x < W; x += 120) { g.beginPath(); g.moveTo(x, top); g.lineTo(x, floorY); g.stroke(); }
+  g.fillStyle = C.plantFloor; g.fillRect(0, floorY, W, top + Hl - floorY);
+  // label
+  font(700, Math.round(13 * fs), 'disp'); g.textAlign = 'left'; g.textBaseline = 'top';
+  g.fillStyle = S.two ? (i === 0 ? C.john : C.sally) : C.ink;
+  const settings = 'aim ' + ln.p.aim.toFixed(1) + ' in, σ ' + ln.p.sd.toFixed(2) + ' in';
+  if (S.sceneLabel) g.fillText((SL.compact ? '' : 'Fairfax Pickleball Works · ') + S.sceneLabel, SL.compact ? 10 : 12, top + 8 * f);
+  else if (SL.compact) g.fillText((S.two ? NAMES[i] + ' · ' : 'Machine ') + settings, 10, top + 8 * f);
+  else g.fillText((S.two ? NAMES[i] : 'Fairfax Pickleball Works') + ' · machine ' + settings, 12, top + 8 * f);
+  const r = 7 * fs;
+  let pickX;
+  if (SL.compact) {   // phones: a QC basket stands in for the press, belt and crate
+    pickX = 30;
+    g.fillStyle = C.crate; g.fillRect(8, beltY, 44, floorY - beltY);
+    for (let k = 0; k < 3; k++) ball(18 + k * 12, beltY - r + 2, r * 0.8);
+    pill(pickX, beltY - 30 * f, 'QC', C.accent, C.surface, Math.round(10 * fs));
+  } else {
+  // molding machine (rotational molding: the mold spins while the plastic coats it)
+  const px0 = 14, px1 = bx0, pTop = floorY - 150 * f;
+  g.fillStyle = C.machine2; g.fillRect(px0 + 8, floorY - 12 * f, 10, 12 * f); g.fillRect(px1 - 18, floorY - 12 * f, 10, 12 * f);
+  g.fillStyle = C.machine; rr(px0, pTop, px1 - px0, floorY - 12 * f - pTop, 6); g.fill();
+  g.beginPath(); g.moveTo(px0 + 22, pTop); g.lineTo(px1 - 22, pTop); g.lineTo(px1 - 36, pTop - 22 * f); g.lineTo(px0 + 36, pTop - 22 * f); g.closePath();
+  g.fillStyle = C.machine2; g.fill();
+  font(700, Math.round(11 * fs), 'disp'); g.fillStyle = C.machineInk; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText('MOLDING', (px0 + px1) / 2, pTop + 20 * f);
+  an.rot = (an.rot || 0) + dt * 2.5;
+  { const mx = (px0 + px1) / 2 - 6, my = pTop + 66 * f, mr = 22 * f;
+    g.strokeStyle = C.machineInk; g.lineWidth = 2; g.beginPath(); g.arc(mx, my, mr, 0, 7); g.stroke();
+    for (const a of [an.rot, an.rot + Math.PI / 2]) { g.beginPath(); g.moveTo(mx - Math.cos(a) * mr, my - Math.sin(a) * mr); g.lineTo(mx + Math.cos(a) * mr, my + Math.sin(a) * mr); g.stroke(); }
+    ball(mx, my, 6 * fs, 1, true); }
+  g.fillStyle = S.playing ? C.gold : C.machine2; g.beginPath(); g.arc(px1 - 12, pTop + 40 * f, 5, 0, 7); g.fill();
+  g.fillStyle = C.machine2; g.fillRect(px1 - 12, beltY - 18 * f, 14, 18 * f);
+  // hole drill over the belt (outdoor balls get 40 holes)
+  const drillX = bx0 + (bx1 - bx0) * 0.45, beamY = beltY - 62 * f;
+  g.fillStyle = C.tower; g.fillRect(drillX - 30, beamY, 5, floorY - beamY); g.fillRect(drillX + 25, beamY, 5, floorY - beamY);
+  // conveyor
+  g.fillStyle = C.belt; g.fillRect(bx0, beltY, bx1 - bx0, 10 * f);
+  g.strokeStyle = C.belt2; g.lineWidth = 1;
+  const off = (time * 60) % 16;
+  for (let x = bx0 + off; x < bx1; x += 16) { g.beginPath(); g.moveTo(x, beltY + 2); g.lineTo(x, beltY + 10 * f - 2); g.stroke(); }
+  g.fillStyle = C.belt2;
+  for (let x = bx0 + 30; x < bx1 - 10; x += 110) g.fillRect(x, beltY + 10 * f, 6, floorY - beltY - 10 * f);
+  // belt balls (a picture of production, not the simulated numbers)
+  if (S.playing) {
+    for (const b of an.belt) b.x += 60 * dt;
+    an.gap += 60 * dt;
+    if (an.gap > 26) { an.gap = 0; an.belt.push({ x: bx0 + 4 }); }
+  }
+  an.belt = an.belt.filter((b) => b.x < bx1 + 4);
+  for (const b of an.belt) ball(b.x, beltY - r, r, 1, b.x < drillX);
+  // drill head and bit (drawn over the balls)
+  g.fillStyle = C.machine; g.fillRect(drillX - 32, beamY - 4, 64, 8 * f + 4);
+  g.fillStyle = C.machine2; rr(drillX - 11, beamY + 8 * f, 22, 16 * f, 3); g.fill();
+  { const jig = S.playing ? (Math.sin(time * 18) + 1) * 2.5 : 0;
+    g.strokeStyle = C.machine; g.lineWidth = 3; g.beginPath(); g.moveTo(drillX, beamY + 24 * f); g.lineTo(drillX, beltY - 2 * r - 6 + jig); g.stroke(); }
+  font(700, Math.round(10 * fs), 'disp'); g.fillStyle = C.ink2; g.textAlign = 'center'; g.textBaseline = 'bottom';
+  g.fillText('HOLE DRILL', drillX, beamY - 6);
+  // packing
+  const cx0 = bx1 + 8, cx1 = bx1 + 72;
+  g.fillStyle = C.crate; g.fillRect(cx0, floorY - 46 * f, cx1 - cx0, 46 * f);
+  g.strokeStyle = C.plantWall2; g.lineWidth = 1; for (let k = 1; k < 3; k++) { const y = floorY - 46 * f + k * 15 * f; g.beginPath(); g.moveTo(cx0, y); g.lineTo(cx1, y); g.stroke(); }
+  for (let k = 0; k < 4; k++) ball(cx0 + 10 + k * 15, floorY - 46 * f - r + 2, r * 0.9);
+  font(700, Math.round(10 * fs), 'disp'); g.fillStyle = C.ink2; g.textAlign = 'center'; g.textBaseline = 'top';
+  g.fillText('PACKING', (cx0 + cx1) / 2, floorY + 2);
+  // QC pick point
+  pickX = bx1 - 40;
+  pill(pickX, beltY - 34 * f, 'QC', C.accent, C.surface, Math.round(10 * fs));
+  }
+  // tower and ruler
+  g.fillStyle = C.plate; g.fillRect(towerX - 26, plateY, 52, floorY - plateY);
+  g.fillStyle = C.tower; g.fillRect(towerX + 12, topY - 6, 5, plateY - topY + 6);
+  g.fillRect(towerX - 10, topY - 8, 27, 4);
+  g.fillStyle = C.good; g.globalAlpha = 0.28; g.fillRect(towerX + 17, TY(34), 10, TY(30) - TY(34)); g.globalAlpha = 1;
+  font(400, Math.round(9 * fs), 'mono'); g.fillStyle = C.muted; g.textAlign = 'left'; g.textBaseline = 'middle';
+  g.strokeStyle = C.tower; g.lineWidth = 1;
+  for (let v = 0; v <= 70; v += 10) { const y = Math.round(TY(v)) + 0.5; g.beginPath(); g.moveTo(towerX + 17, y); g.lineTo(towerX + 23, y); g.stroke(); if (v % 20 === 0 || v === 70) g.fillText(String(v), towerX + 26, y); }
+  g.fillText('78 in', towerX + 26, TY(78));
+  // zoom wedge to the gauge
+  g.strokeStyle = C.muted; g.setLineDash([3, 3]); g.lineWidth = 1;
+  g.beginPath(); g.moveTo(towerX + 27, TY(36)); g.lineTo(gX, gTop); g.moveTo(towerX + 27, TY(28)); g.lineTo(gX, gBot); g.stroke(); g.setLineDash([]);
+  // gauge
+  g.fillStyle = C.gaugeBg; g.fillRect(gX, gTop, gW, gBot - gTop);
+  g.fillStyle = C.dangerSoft; g.fillRect(gX, GY(36), gW, GY(34) - GY(36)); g.fillRect(gX, GY(30), gW, GY(28) - GY(30));
+  g.fillStyle = C.accentSoft; g.fillRect(gX, GY(34), gW, GY(30) - GY(34));
+  g.strokeStyle = C.rule; g.lineWidth = 1; g.strokeRect(gX + 0.5, gTop + 0.5, gW - 1, gBot - gTop - 1);
+  font(400, Math.round(9 * fs), 'mono'); g.textAlign = 'right'; g.textBaseline = 'middle'; g.fillStyle = C.muted;
+  for (let v = 28; v <= 36; v++) { const y = Math.round(GY(v)) + 0.5; g.strokeStyle = C.muted; g.beginPath(); g.moveTo(gX, y); g.lineTo(gX + 5, y); g.stroke(); if (Hl >= 250 || v % 2 === 0) g.fillText(String(v), gX - 3, y); }
+  g.strokeStyle = C.danger; g.lineWidth = 2;
+  for (const v of [30, 34]) { const y = Math.round(GY(v)) + 0.5; g.beginPath(); g.moveTo(gX, y); g.lineTo(gX + gW, y); g.stroke(); }
+  g.strokeStyle = C.ink2; g.lineWidth = 1; g.setLineDash([4, 3]);
+  { const y = Math.round(GY(32)) + 0.5; g.beginPath(); g.moveTo(gX, y); g.lineTo(gX + gW, y); g.stroke(); } g.setLineDash([]);
+  font(700, Math.round(9 * fs), 'mono'); g.textAlign = 'left'; g.fillStyle = C.danger;
+  g.fillText('UTL 34', gX + gW + 4, GY(34)); g.fillText('LTL 30', gX + gW + 4, GY(30));
+  g.fillStyle = C.ink2; g.fillText('target 32', gX + gW + 4, GY(32));
+  // past readings
+  const nR = an.readings.length;
+  an.readings.forEach((rd, k) => {
+    const y = GY(rd.x), a = 0.25 + 0.6 * (k + 1) / nR, last = k === nR - 1 && !an.cur;
+    g.globalAlpha = last ? 1 : a; g.strokeStyle = rd.ok ? C.good : C.danger; g.lineWidth = last ? 3 : 2;
+    g.beginPath(); g.moveTo(gX + 6, y); g.lineTo(gX + (last ? gW - 6 : 30), y); g.stroke();
+  });
+  g.globalAlpha = 1;
+  // the drop test in progress
+  let shown = an.cur || an.readings[nR - 1];
+  if (an.cur) {
+    // lift from QC to the top, fall, hit the plate (squash), bounce up, hold at the peak for the reading
+    const e = Math.min(1, (time - an.cur.t0) / an.cur.dur), dropX = towerX - 2, peakY = TY(an.cur.x) - r, low = plateY - r;
+    const P = { lift: 0.12, fall: 0.44, hit: 0.54, rise: 0.80 };
+    const pos = (q) => {
+      if (q < P.lift) { const u = q / P.lift; return { x: pickX + (dropX - pickX) * u, y: (beltY - r) + (topY - (beltY - r)) * u - Math.sin(Math.PI * u) * 28 * f, sq: 0 }; }
+      if (q < P.fall) { const u = (q - P.lift) / (P.fall - P.lift); return { x: dropX, y: topY + (low - topY) * Math.pow(u, 1.6), sq: 0 }; }
+      if (q < P.hit) return { x: dropX, y: low, sq: Math.sin(Math.PI * (q - P.fall) / (P.hit - P.fall)) };
+      if (q < P.rise) { const u = (q - P.hit) / (P.rise - P.hit); return { x: dropX, y: low + (peakY - low) * (1 - Math.pow(1 - u, 1.6)), sq: 0 }; }
+      return { x: dropX, y: peakY, sq: 0 };
+    };
+    if (e >= P.rise) { // reading: link the peak to the gauge
+      g.strokeStyle = an.cur.ok ? C.good : C.danger; g.lineWidth = 3;
+      g.beginPath(); g.moveTo(gX + 6, GY(an.cur.x)); g.lineTo(gX + gW - 6, GY(an.cur.x)); g.stroke();
+      g.lineWidth = 1; g.setLineDash([2, 3]); g.beginPath(); g.moveTo(dropX + r, peakY + r); g.lineTo(gX, GY(an.cur.x)); g.stroke(); g.setLineDash([]);
+    } else shown = an.readings[nR - 1];
+    if (e > P.lift && e < P.rise + 0.06) for (let k = 4; k >= 1; k--) {   // faint trail, so the path down and back up stays visible
+      const q = e - 0.03 * k; if (q <= P.lift) continue;
+      const o = pos(q); ball(o.x, o.y, r * 0.85, 0.32 - 0.06 * k);
+    }
+    const o = pos(e);
+    if (o.sq > 0) { // contact with the granite plate
+      g.strokeStyle = C.ink2; g.lineWidth = 1.5; g.globalAlpha = o.sq;
+      for (const s of [-1, 1]) for (const [a, b] of [[4, 2], [8, 7], [3, 11]]) { g.beginPath(); g.moveTo(dropX + s * (r + a), plateY - b * 0.4); g.lineTo(dropX + s * (r + a + 6), plateY - b); g.stroke(); }
+      g.globalAlpha = 1;
+      g.save(); g.translate(dropX, plateY); g.scale(1 + 0.25 * o.sq, 1 - 0.35 * o.sq); ball(0, -r, r); g.restore();
+    } else ball(o.x, o.y, r);
+    if (e >= 1) finishAnim(an);
+  }
+  if (shown) {
+    const txt = shown.x.toFixed(1) + ' in ' + (shown.ok ? '✓' : '✗');
+    pill(gX + gW / 2, gTop - 13 * fs, txt, shown.ok ? C.good : C.danger, C.surface, Math.round(11 * fs));
+  }
+  // today's pass/fail
+  const tday = ln.testsOfDay(dayOf(ln.t)), bad = tday.filter((o) => o.x < SPEC.ltl || o.x > SPEC.utl).length;
+  font(700, Math.round(10 * fs), 'mono'); g.textAlign = 'center'; g.textBaseline = 'top';
+  g.fillStyle = C.ink2; g.fillText('today ✓' + (tday.length - bad) + ' ✗' + bad, gX + gW / 2, gBot + 6 * f);
+}
+function drawScene(time, dt) {
+  if (!C.ink || !lines.length) return;
+  g.setTransform(SL.DPR * SL.SC, 0, 0, SL.DPR * SL.SC, 0, 0);
+  g.clearRect(0, 0, SL.W, SL.H);
+  if (S.two) { drawLane(0, 0, SL.H / 2, time, dt); drawLane(1, SL.H / 2, SL.H / 2, time, dt); g.fillStyle = C.rule; g.fillRect(0, SL.H / 2 - 1, SL.W, 2); }
+  else drawLane(0, 0, SL.H, time, dt);
+}
+
+// ---------- histogram
+const hist = $('#hist'), hg = hist.getContext('2d'), htip = $('#hist-tip');
+let hHover = null, hBins = null;
+function canvasSetup(cv, cx, h) {
+  const w = cv.parentElement.clientWidth || 600, dpr = window.devicePixelRatio || 1;
+  cv.style.height = h + 'px';
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+  cx.setTransform(dpr, 0, 0, dpr, 0, 0); cx.clearRect(0, 0, w, h);
+  return w;
+}
+function wrapText(cx, txt, x, y, maxW, lh) {   // centered lines that fit maxW, around y
+  const words = txt.split(' '), rows = []; let cur = '';
+  for (const w of words) { const t = cur ? cur + ' ' + w : w; if (cx.measureText(t).width > maxW && cur) { rows.push(cur); cur = w; } else cur = t; }
+  rows.push(cur);
+  rows.forEach((r, i) => cx.fillText(r, x, y + (i - (rows.length - 1) / 2) * lh));
+}
+function hfont(cx, w, px) { cx.font = (w || 400) + ' ' + (px || 11) + 'px "IBM Plex Mono", ui-monospace, Menlo, monospace'; }
+function srcData() { // [{xs, label}] per line for the chosen source
+  const d = curDay();
+  return lines.map((ln, i) => {
+    if (S.histSrc === 'long' && longRes) return { xs: longRes[i].xs, label: '100 days (' + int(longRes[i].xs.length) + ' tested balls)' };
+    if (S.histSrc === 'all') return { xs: ln.tests.map((o) => o.x), label: 'all days so far (' + ln.tests.length + ' tested balls)' };
+    let dd = d, xs = ln.testsOfDay(dd).map((o) => o.x);
+    if (!xs.length && dd > 0) { dd--; xs = ln.testsOfDay(dd).map((o) => o.x); }   // a new day before its first test: keep showing the finished day
+    const done = xs.length === PER_DAY;
+    return { xs, label: 'Day ' + (dd + 1) + (done ? ' (all ' + PER_DAY + ' tested balls)' : ' so far (' + xs.length + ' of ' + PER_DAY + ' tested balls)') };
+  });
+}
+function tickStep(pxPerInch) { return [1, 2, 5, 10, 20, 50].find((t) => pxPerInch * t >= 26) || 100; }   // at least 26 px between labels
+function domainOf(sets) {
+  let lo = 28, hi = 36;
+  for (const s of sets) for (const x of s.xs) { if (x < lo) lo = x; if (x > hi) hi = x; }
+  lo = Math.floor(lo); hi = Math.ceil(hi);   // no cap: every ball lands in its own bin
+  const span = hi - lo;
+  return { lo, hi, bw: span > 40 ? Math.ceil(span / 40) : span > 20 ? 1 : span > 10 ? 0.5 : 0.25 };
+}
+function drawPanel(cx, x0, y0, w, h, data, dom, i, mode) {
+  const pad = { l: 34, r: 12, t: mode === 'two' ? 68 : 58, b: 22 }, pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
+  const X = (v) => x0 + pad.l + (v - dom.lo) / (dom.hi - dom.lo) * pw;
+  const nb = Math.round((dom.hi - dom.lo) / dom.bw), counts = new Array(nb).fill(0);
+  for (const x of data.xs) { const b = Math.min(nb - 1, Math.max(0, Math.floor((x - dom.lo) / dom.bw))); counts[b]++; }
+  const st = statsOf(data.xs), n = data.xs.length;
+  let cmax = counts.reduce((a, b) => Math.max(a, b), 1);
+  if (st && st.sd > 0) cmax = Math.max(cmax, n * dom.bw / (st.sd * Math.sqrt(2 * Math.PI)));
+  const Y = (c) => y0 + pad.t + ph - c / cmax * ph;
+  const col = mode === 'two' ? (i === 0 ? C.john : C.sally) : C.accent;
+  // axis
+  hfont(cx); cx.fillStyle = C.muted; cx.textAlign = 'center'; cx.textBaseline = 'top'; cx.strokeStyle = C.rule; cx.lineWidth = 1;
+  cx.beginPath(); cx.moveTo(x0 + pad.l, y0 + pad.t + ph + 0.5); cx.lineTo(x0 + pad.l + pw, y0 + pad.t + ph + 0.5); cx.stroke();
+  const step = tickStep(pw / (dom.hi - dom.lo));
+  for (let v = Math.ceil(dom.lo / step) * step; v <= dom.hi; v += step) cx.fillText(String(v), X(v), y0 + pad.t + ph + 5);
+  // X̄ ± kσ band behind the bars (the balls counted in the table below the chart)
+  const full = S.tab === 'play';   // arrows and the X̄ ± kσ band only on the Playground; the capability tab has its own picture
+  if (mode !== 'two' && full && st && st.sd > 0) {
+    const M = Number(f2(st.mean)), kdR = S.k * Number(f2(st.sd));
+    const xa = Math.max(X(dom.lo), X(M - kdR)), xb = Math.min(X(dom.hi), X(M + kdR));
+    cx.fillStyle = C.accentSoft; cx.fillRect(xa, y0 + 50, xb - xa, y0 + pad.t + ph - (y0 + 50));
+  }
+  // bars
+  const bars = [];
+  for (let b = 0; b < nb; b++) {
+    if (!counts[b]) continue;
+    const a = dom.lo + b * dom.bw, z = a + dom.bw, xa = X(a) + 0.5, xb = X(z) - 0.5, y = Y(counts[b]);
+    const outside = z <= SPEC.ltl + 1e-9 || a >= SPEC.utl - 1e-9;
+    cx.fillStyle = outside ? C.danger : col; cx.fillRect(xa, y, Math.max(1, xb - xa), y0 + pad.t + ph - y);
+    bars.push({ a, z, c: counts[b], x: (xa + xb) / 2, y, panel: i });
+  }
+  // normal curve
+  if (st && st.sd > 0 && n >= 5) {
+    cx.strokeStyle = C.ink2; cx.lineWidth = 1.5; cx.beginPath();
+    for (let k = 0; k <= 200; k++) {
+      const v = dom.lo + (dom.hi - dom.lo) * k / 200, pdf = Math.exp(-0.5 * ((v - st.mean) / st.sd) ** 2) / (st.sd * Math.sqrt(2 * Math.PI));
+      const y = Y(n * dom.bw * pdf); if (k === 0) cx.moveTo(X(v), y); else cx.lineTo(X(v), y);
+    }
+    cx.stroke();
+  }
+  // limits and target
+  cx.strokeStyle = C.danger; cx.lineWidth = 2;
+  for (const v of [SPEC.ltl, SPEC.utl]) { const x = Math.round(X(v)) + 0.5; cx.beginPath(); cx.moveTo(x, y0 + (mode === 'two' ? 20 : 18)); cx.lineTo(x, y0 + pad.t + ph); cx.stroke(); }
+  cx.strokeStyle = C.muted; cx.lineWidth = 1; cx.setLineDash([4, 3]);
+  { const x = Math.round(X(SPEC.target)) + 0.5; cx.beginPath(); cx.moveTo(x, y0 + (mode === 'two' ? 36 : pad.t)); cx.lineTo(x, y0 + pad.t + ph); cx.stroke(); }
+  cx.setLineDash([]);
+  hfont(cx, 700, 10); cx.textBaseline = 'bottom';
+  const lab = (txt, x, y, color, align) => { cx.font = '700 10px "IBM Plex Mono", ui-monospace, monospace'; const tw = cx.measureText(txt).width; const xx = align === 'right' ? x - tw : align === 'center' ? x - tw / 2 : x; cx.fillStyle = C.surface; cx.fillRect(xx - 2, y - 12, tw + 4, 13); cx.fillStyle = color; cx.textAlign = 'left'; cx.fillText(txt, xx, y); };
+  // label rows above the bars: (two lines: the line's name first) limits, then arrows
+  const yLim = y0 + (mode === 'two' ? 30 : 14);
+  if (mode === 'two') lab(NAMES[i] + (data.xs.length ? '' : ': no tested balls yet'), x0 + pad.l, y0 + 14, col, 'left');
+  lab('LTL 30', X(SPEC.ltl) - 3, yLim, C.danger, 'right'); lab('UTL 34', X(SPEC.utl) + 3, yLim, C.danger, 'left');
+  const xbarLab = (txt) => {   // centered on X̄ unless it would cover a limit label or line; then beside it
+    cx.font = '700 10px "IBM Plex Mono", ui-monospace, monospace';
+    const tw = cx.measureText(txt).width, wL = cx.measureText('LTL 30').width, wU = cx.measureText('UTL 34').width, xc = X(st.mean);
+    let x = xc - tw / 2;
+    for (const [a, b] of [[X(SPEC.ltl) - 3 - wL - 4, X(SPEC.ltl) + 3], [X(SPEC.utl) - 3, X(SPEC.utl) + 3 + wU + 4]]) if (x < b && x + tw > a) x = xc < (a + b) / 2 ? a - tw : b;
+    lab(txt, Math.max(x0 + 2, Math.min(x0 + w - tw - 2, x)), yLim, C.ink, 'left');
+  };
+  if (!st) {
+    hfont(cx, 400, 12); cx.fillStyle = C.muted; cx.textAlign = 'center'; cx.textBaseline = 'middle';
+    wrapText(cx, 'No tested balls yet: the first one is tested at 7:06 am.', x0 + pad.l + pw / 2, y0 + pad.t + ph / 2, pw - 8, 16);
+    return bars;
+  }
+  // X-bar marker
+  const xm = Math.round(X(st.mean)) + 0.5;
+  cx.strokeStyle = C.ink; cx.lineWidth = 2; cx.beginPath(); cx.moveTo(xm, y0 + (mode === 'two' ? 36 : 18)); cx.lineTo(xm, y0 + pad.t + ph); cx.stroke();
+  const arrow = (xa, xb, y, color, txt) => {
+    cx.strokeStyle = color; cx.fillStyle = color; cx.lineWidth = 1.5;
+    cx.beginPath(); cx.moveTo(xa, y); cx.lineTo(xb, y); cx.stroke();
+    const hd = (x, dir) => { cx.beginPath(); cx.moveTo(x, y); cx.lineTo(x - dir * 6, y - 4); cx.lineTo(x - dir * 6, y + 4); cx.closePath(); cx.fill(); };
+    if (Math.abs(xb - xa) > 12) { hd(xb, Math.sign(xb - xa)); hd(xa, Math.sign(xa - xb)); }
+    lab(txt, (xa + xb) / 2, y - 3, color, 'center');
+  };
+  if (mode === 'two') {
+    const yA = y0 + 48, yB = y0 + 64;
+    const gap = Number(f2(st.mean)) - SPEC.target;   // labels use the rounded numbers in the table
+    arrow(X(SPEC.target), X(st.mean), yA, C.ink, 'off target ' + (gap >= 0 ? '+' : '−') + Math.abs(gap).toFixed(2));
+    arrow(X(st.mean - st.sd), X(st.mean + st.sd), yB, col, '±σ, σ = ' + f2(st.sd));
+  } else if (!full) {
+    xbarLab('X̄ = ' + f2(st.mean));
+  } else {
+    const k = S.k, kd = k * st.sd, mR = Number(f2(st.mean)), kdR = k * Number(f2(st.sd));   // labels use the rounded numbers shown below the chart
+    // X-bar ± kσ, dotted as on slide 11
+    cx.strokeStyle = C.accent; cx.lineWidth = 1.5; cx.setLineDash([2, 3]);
+    for (const v of [st.mean - kd, st.mean + kd]) { if (v < dom.lo || v > dom.hi) continue; const x = Math.round(X(v)) + 0.5; cx.beginPath(); cx.moveTo(x, y0 + 50); cx.lineTo(x, y0 + pad.t + ph); cx.stroke(); }
+    cx.setLineDash([]);
+    xbarLab('X̄ = ' + f2(st.mean));
+    const yS = y0 + 32, yK = y0 + 50;
+    const narrow = pw < 520;   // phone: numbers only on the arrows
+    arrow(X(SPEC.ltl), xm, yS, C.ink2, (narrow ? '' : 'X̄ − LTL = ') + n2(mR - SPEC.ltl));
+    arrow(xm, X(SPEC.utl), yS, C.ink2, (narrow ? '' : 'UTL − X̄ = ') + n2(SPEC.utl - mR));
+    arrow(Math.max(X(dom.lo), X(st.mean - kd)), xm, yK, C.accent, (narrow ? '' : k + 'σ = ') + f2(kdR));
+    arrow(xm, Math.min(X(dom.hi), X(st.mean + kd)), yK, C.accent, (narrow ? '' : k + 'σ = ') + f2(kdR));
+  }
+  return bars;
+}
+function drawHist() {
+  if (!C.ink || !lines.length) return;
+  const sets = srcData(), dom = domainOf(sets);
+  lastDom = dom;
+  const H = S.two ? 400 : 270;
+  const w = canvasSetup(hist, hg, H);
+  hBins = [];
+  if (S.two) { hBins = hBins.concat(drawPanel(hg, 0, 0, w, H / 2, sets[0], dom, 0, 'two'), drawPanel(hg, 0, H / 2, w, H / 2, sets[1], dom, 1, 'two')); }
+  else hBins = drawPanel(hg, 0, 0, w, H, sets[0], dom, 0, 'one');
+  $('#hist-cap').innerHTML = 'Bounce heights of the tested balls, in inches <span>(' + (S.two ? sets[0].label.replace(/\(.*/, '').trim() + ', each line' : sets[0].label) + '; red bars = outside 30–34; dashed line = target 32; curve = normal curve with the sample\'s <span class="xm">X̄</span> and σ' + (S.tab === 'play' ? '; shaded = <span class="xm">X̄</span> ± ' + S.k + 'σ' : '') + ')</span>';
+  if (hHover !== null) {
+    let best = null;
+    for (const b of hBins) if (Math.abs(b.x - hHover.x) < 8 && (!best || Math.abs(b.y - hHover.y) < Math.abs(best.y - hHover.y))) best = b;
+    if (best) { htip.hidden = false; htip.style.left = best.x + 'px'; htip.style.top = Math.max(18, best.y) + 'px'; htip.textContent = (S.two ? NAMES[best.panel] + ': ' : '') + best.c + ' balls between ' + best.a.toFixed(2) + ' and ' + best.z.toFixed(2) + ' in'; }
+    else htip.hidden = true;
+  } else htip.hidden = true;
+  renderStrip(sets);
+  const lbl = 'Histogram of the bounce heights of the tested balls, ' + sets.map((d, i) => {
+    const st = statsOf(d.xs);
+    return (S.two ? NAMES[i] + ': ' : '') + (st ? d.xs.length + ' balls, average ' + f2(st.mean) + ' inches, σ ' + f2(st.sd) + ' inches, ' + st.out + ' outside 30 to 34' : 'no tested balls yet');
+  }).join('; ') + '. Tolerance limits 30 and 34 inches are marked.';
+  if (hist.getAttribute('aria-label') !== lbl) hist.setAttribute('aria-label', lbl);
+}
+hist.addEventListener('pointermove', (e) => { const r = hist.getBoundingClientRect(); hHover = { x: e.clientX - r.left, y: e.clientY - r.top }; drawHist(); });
+hist.addEventListener('pointerleave', () => { hHover = null; drawHist(); });
+
+function renderStrip(sets) {
+  const el = $('#cap-strip'), k = S.k;
+  if (S.two) {
+    const rows = sets.map((s, i) => {
+      const st = statsOf(s.xs), cls = i === 0 ? 'john' : 'sally';
+      if (!st) return `<tr><th scope="row" class="l ${cls}">${NAMES[i]}</th><td colspan="5" class="l">no tested balls yet</td></tr>`;
+      const gap = Number(f2(st.mean)) - SPEC.target, c = Number(f2(st.sd)) > 0 ? cpkShown(Number(f2(st.mean)), Number(f2(st.sd)), 3) : { cpk: NaN };
+      return `<tr><th scope="row" class="l ${cls}">${NAMES[i]}</th><td>${f2(st.mean)}</td><td>${(gap >= 0 ? '+' : '−') + Math.abs(gap).toFixed(2)}</td><td>${f2(st.sd)}</td><td>${st.out} of ${st.n}</td><td>${f2(c.cpk)}</td></tr>`;
+    }).join('');
+    el.innerHTML = `<p class="src">From ${sets[0].label.replace(/\(.*/, '').trim().toLowerCase().replace(/^day/, 'Day')} on each line. Accurate = average close to the 32-inch target; consistent = small σ.</p>
+      <div class="table-wrap"><table><caption class="sr-only">Accuracy and consistency of each line</caption>
+      <thead><tr><th scope="col" class="l">Line</th><th scope="col">Average <span class="xm">X̄</span> (in)</th><th scope="col">Off target (in)</th><th scope="col">σ (in)</th><th scope="col">Outside 30–34</th><th scope="col">C<sub>pk</sub> at 3σ</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>`;
+    return;
+  }
+  const s = sets[0], st = statsOf(s.xs), ln = lines[0];
+  if (!st || st.n < 2 || !(Number(f2(st.sd)) > 0)) { el.innerHTML = '<p class="src"><span class="xm">X̄</span>, σ and C<sub>pk</sub> appear here once a few balls have been tested.</p>'; return; }
+  const m = f2(st.mean), sd = f2(st.sd), c = cpkShown(Number(m), Number(sd), k), d = pDefect(Number(m), Number(sd));   // from the rounded numbers shown, so a hand calculation matches
+  const ok = c.cpk >= 1 - 1e-9;   // exactly 1 counts as capable (slide 12)
+  const days = ln.days.length ? 'C<sub>pk</sub> at ' + k + 'σ on each finished day: ' + ln.days.slice(-8).map((q, j) => 'Day ' + (ln.days.length - Math.min(8, ln.days.length) + j + 1) + ' ' + f2(cpkShown(Number(f2(q.mean)), Number(f2(q.sd)), k).cpk)).join(' · ') : '';
+  // the handwritten-notes steps: limits, X̄ and σ, safety distance vs. kσ (with the empirical rule), C_pk
+  const M = Number(m), SD = Number(sd), safe = Math.min(M - SPEC.ltl, SPEC.utl - M), RULE = ['68%', '95%', '99.7%'];
+  const rows = [1, 2, 3].map((j) => {
+    const inBand = s.xs.filter((x) => x >= M - j * SD - 1e-9 && x <= M + j * SD + 1e-9).length, cj = cpkShown(M, SD, j), okj = cj.cpk >= 1 - 1e-9;
+    return `<tr${j === k ? ' class="sel"' : ''}><th scope="row" class="l">${j}σ</th><td>${f2(j * SD)}</td><td>${int(inBand)} of ${int(st.n)}${st.n === 100 ? '' : ' (' + (st.n >= 1000 ? (100 * inBand / st.n).toFixed(1) : Math.round(100 * inBand / st.n)) + '%)'}</td><td>${RULE[j - 1]}</td><td class="${okj ? 'ok' : 'bad'}">${n2(cj.cpk)} ${okj ? 'capable' : 'not capable'}</td></tr>`;
+  }).join('');
+  el.innerHTML = `<p class="src">From ${s.label}${S.histSrc === 'today' && st.n < PER_DAY ? ', updated as balls are tested' : ''}:</p>
+    <ol class="steps">
+      <li><b>Design standard.</b> <span class="formula">LTL = 30, UTL = 34</span> inches (the USA Pickleball bounce rule).</li>
+      <li><b>Process variability.</b> <span class="formula"><span class="xm">X̄</span> = ${m} in, σ = ${sd} in</span>; outside 30–34: ${st.out} of ${int(st.n)} (${pctTxt(st.out / st.n)}).</li>
+      <li><b>Safety distance</b> = <span class="formula">min{<span class="xm">X̄</span> − LTL, UTL − <span class="xm">X̄</span>} = min{${m} − 30, 34 − ${m}} = min{${n2(M - SPEC.ltl)}, ${n2(SPEC.utl - M)}} = <b>${n2(safe)} in</b></span>. How far do the balls spread around X̄?
+        <div class="table-wrap"><table><caption class="sr-only">Balls within one, two and three standard deviations of the average, and Cpk at each level</caption>
+        <thead><tr><th scope="col" class="l">Level</th><th scope="col">kσ (in)</th><th scope="col">Balls within <span class="xm">X̄</span> ± kσ</th><th scope="col">Normal curve</th><th scope="col">C<sub>pk</sub> = ${n2(safe)} / kσ</th></tr></thead>
+        <tbody>${rows}</tbody></table></div></li>
+      <li><b>Capability index</b> at the ${k}σ level: capable if ${k}σ fits in the safety distance.
+        <span class="formula">C<sub>pk</sub> = min{(<span class="xm">X̄</span> − LTL)/(kσ), (UTL − <span class="xm">X̄</span>)/(kσ)} = min{(${m} − 30)/(${k} × ${sd}), (34 − ${m})/(${k} × ${sd})} = min{${n2(c.lo)}, ${n2(c.hi)}} = <b>${n2(c.cpk)}</b></span></li>
+    </ol>
+    <p class="verdict ${ok ? 'ok' : 'bad'}">C<sub>pk</sub> ${ok ? '≥' : '<'} 1: ${ok ? 'capable' : 'not capable'} at the ${k}σ level</p>
+    <p class="star">*Normal curve: <span class="formula">P(defect) = P(z &lt; (30 − ${m})/${sd}) + P(z &gt; (34 − ${m})/${sd}) = P(z &lt; ${n2(d.zl)}) + P(z &gt; ${n2(d.zu)}) = ${pctTxt(d.lo)} + ${pctTxt(d.hi)} = ${pctTxt(d.p)}</span></p>
+    ${days ? '<p class="days">' + days + '</p>' : ''}`;
+}
+
+// ---------- safety distance vs. the mistake (capability tab; the picture in practice feedback)
+const cmpCard = $('#cmp-card'), cmpCv = $('#cmp'), cmpG = cmpCv.getContext('2d');
+const CMP = { step: 1, t0: 0, prob: null };   // prob = a practice problem's numbers; null = the histogram's balls
+const CMP_STEPS = 5, CMP_DUR = [0, 0.6, 0.8, 2.4, 0.8, 0.5];   // seconds of animation for each step
+const RULE_PCT = { 1: '68%', 2: '95%', 3: '99.7%' };
+const WHO = { today: "Today's balls", all: 'All balls tested so far', long: 'The 10,000 balls of the 100-day run', prac: "This day's balls" };
+let lastDom = { lo: 28, hi: 36 }, cmpTextLast = '', cmpSaid = null;
+const CMP_LABEL = 'Two bars on the same inch scale as the histogram: the safety distance, from the average to the nearer tolerance limit, and the mistake, how far balls stray from the average. The sentence below the picture explains it in words.';
+const CMP_LABEL_PRAC = 'Two bars on the same inch scale as the histogram: the safety distance of this problem and its mistake at the asked level. The worked solution in the practice panel explains it in words.';
+function cmpData() {
+  if (CMP.prob) return CMP.prob;
+  const s = srcData()[0], st = s && statsOf(s.xs);
+  if (!st || st.n < PER_HOUR || !(Number(f2(st.sd)) > 0)) return null;   // at least an hour of tested balls
+  return { m: Number(f2(st.mean)), sd: Number(f2(st.sd)), k: 3, xs: s.xs, n: st.n, who: WHO[S.histSrc] || WHO.today };
+}
+function cmpProgress(now) {
+  if (CMP.prob || reduceMotion) return 1;
+  return Math.max(0, Math.min(1, (now / 1000 - CMP.t0) / CMP_DUR[CMP.step]));
+}
+function drawCmp(now) {
+  const d = cmpData(), H = 214, w = canvasSetup(cmpCv, cmpG, H), cx = cmpG;
+  const dom = lastDom, padL = 34, padR = 12, pw = w - padL - padR, narrow = pw < 520;
+  const X = (v) => padL + (Math.max(dom.lo, Math.min(dom.hi, v)) - dom.lo) / (dom.hi - dom.lo) * pw;
+  const step = CMP.prob ? CMP_STEPS : CMP.step, p = cmpProgress(now), ease = (u) => 1 - (1 - u) * (1 - u);
+  const yTop = 28, yS = 76, yM = 138, yAx = H - 22;
+  const lab = (txt, x, y, color, align) => {
+    cx.font = '700 11px "IBM Plex Mono", ui-monospace, monospace';
+    const tw = cx.measureText(txt).width;
+    let xx = align === 'right' ? x - tw : align === 'center' ? x - tw / 2 : x;
+    xx = Math.max(2, Math.min(w - tw - 2, xx));
+    cx.fillStyle = C.surface; cx.fillRect(xx - 2, y - 11, tw + 4, 14);
+    cx.fillStyle = color; cx.textAlign = 'left'; cx.textBaseline = 'alphabetic'; cx.fillText(txt, xx, y);
+  };
+  const bar = (xa, xb, y, h, color, alpha) => { cx.globalAlpha = alpha === undefined ? 1 : alpha; cx.fillStyle = color; cx.fillRect(Math.min(xa, xb), y - h / 2, Math.abs(xb - xa), h); cx.globalAlpha = 1; };
+  // axis, on the histogram's scale
+  hfont(cx); cx.fillStyle = C.muted; cx.textAlign = 'center'; cx.textBaseline = 'top'; cx.strokeStyle = C.rule; cx.lineWidth = 1;
+  cx.beginPath(); cx.moveTo(padL, yAx + 0.5); cx.lineTo(padL + pw, yAx + 0.5); cx.stroke();
+  const tick = tickStep(pw / (dom.hi - dom.lo));
+  for (let v = Math.ceil(dom.lo / tick) * tick; v <= dom.hi; v += tick) cx.fillText(String(v), X(v), yAx + 5);
+  // step 1: the limits and the good zone between them
+  cx.globalAlpha = step === 1 ? ease(p) : 1; cx.fillStyle = C.accentSoft; cx.fillRect(X(SPEC.ltl), yTop, X(SPEC.utl) - X(SPEC.ltl), yAx - yTop); cx.globalAlpha = 1;
+  cx.strokeStyle = C.danger; cx.lineWidth = 2;
+  for (const v of [SPEC.ltl, SPEC.utl]) { const x = Math.round(X(v)) + 0.5; cx.beginPath(); cx.moveTo(x, yTop - 10); cx.lineTo(x, yAx); cx.stroke(); }
+  lab('LTL 30', X(SPEC.ltl) - 4, yTop - 12, C.danger, 'right'); lab('UTL 34', X(SPEC.utl) + 4, yTop - 12, C.danger, 'left');
+  if (step === 1) lab(narrow ? 'good balls' : 'good balls bounce in here', (X(SPEC.ltl) + X(SPEC.utl)) / 2, (yTop + yAx) / 2 + 4, C.ink2, 'center');
+  if (!d) { if (step > 1) lab('Run the day first', (X(SPEC.ltl) + X(SPEC.utl)) / 2, (yTop + yAx) / 2 + 4, C.muted, 'center'); return null; }
+  if (step < 2) return d;
+  // step 2: the average and the safety distance on each side (the nearer side counts)
+  const m = d.m, sd = d.sd, k = d.k, xm = X(m), dLo = m - SPEC.ltl, dHi = SPEC.utl - m, safe = Math.min(dLo, dHi);
+  const eq = Math.abs(dLo - dHi) < 0.005, nearHi = dHi <= dLo;
+  cx.strokeStyle = C.ink; cx.lineWidth = 2; cx.beginPath(); cx.moveTo(Math.round(xm) + 0.5, yTop - 10); cx.lineTo(Math.round(xm) + 0.5, yAx); cx.stroke();
+  { cx.font = '700 11px "IBM Plex Mono", ui-monospace, monospace';
+    const t = 'X̄ = ' + f2(m), tw = cx.measureText(t).width, wL = cx.measureText('LTL 30').width, wU = cx.measureText('UTL 34').width;
+    let x = xm - tw / 2;
+    for (const [a, b] of [[X(SPEC.ltl) - 4 - wL - 4, X(SPEC.ltl) + 3], [X(SPEC.utl) - 3, X(SPEC.utl) + 4 + wU + 4]]) if (x < b && x + tw > a) x = xm < (a + b) / 2 ? a - tw : b;
+    lab(t, x, yTop - 12, C.ink, 'left'); }
+  if (safe > 0) {
+    const g2 = step === 2 ? ease(p) : 1, near = nearHi ? SPEC.utl : SPEC.ltl, far = nearHi ? SPEC.ltl : SPEC.utl;
+    bar(xm, xm + (X(far) - xm) * g2, yS, eq ? 14 : 8, C.good, eq ? 1 : 0.35);
+    bar(xm, xm + (X(near) - xm) * g2, yS, 14, C.good);
+    if (g2 >= 1) {
+      lab((narrow ? 'safety ' : 'safety distance ') + f2(safe), (xm + X(near)) / 2, yS - 13, C.good, 'center');
+      lab(eq ? f2(safe) : f2(nearHi ? dLo : dHi), (xm + X(far)) / 2, yS - 13, eq ? C.good : C.muted, 'center');
+    }
+  }
+  if (step < 3) return d;
+  // step 3: the mistake grows from X̄: 1σ (68% of balls), 2σ (95%), 3σ (99.7%)
+  const full = k * sd, L = step === 3 ? full * Math.min(1, p) : full;
+  bar(X(m - L), X(m + L), yM, 14, C.ptLine);
+  if (L > 0.05) lab(step === 3 && p < 1 ? f2(L) : (narrow ? k + 'σ ' : k + 'σ mistake ') + f2(full), (xm + X(m + L)) / 2, yM - 13, C.ctl, 'center');
+  if (step === 3) for (let j = 1; j <= k; j++) {
+    if (L + 1e-9 < j * sd) break;
+    cx.strokeStyle = C.ink; cx.lineWidth = 1.5;
+    for (const x of [X(m - j * sd), X(m + j * sd)]) { cx.beginPath(); cx.moveTo(Math.round(x) + 0.5, yM - 10); cx.lineTo(Math.round(x) + 0.5, yM + 10); cx.stroke(); }
+    lab((narrow ? '' : j + 'σ: ') + RULE_PCT[j], X(m + j * sd), yM + 26 + (narrow && j % 2 === 0 ? 14 : 0), C.ink2, 'center');
+  }
+  if (step < 4) return d;
+  // step 4: compare; the part of the mistake past a limit turns red
+  cx.globalAlpha = step === 4 ? ease(p) : 1;
+  const overHi = m + full - SPEC.utl, overLo = SPEC.ltl - (m - full);
+  if (overHi > 1e-9) { bar(X(SPEC.utl), X(m + full), yM, 14, C.danger); lab('✗ ' + f2(overHi) + ' past UTL', (X(SPEC.utl) + X(m + full)) / 2, yM + 28, C.danger, 'center'); }
+  if (overLo > 1e-9) { bar(X(m - full), X(SPEC.ltl), yM, 14, C.danger); lab('✗ ' + f2(overLo) + ' past LTL', (X(m - full) + X(SPEC.ltl)) / 2, yM + 28, C.danger, 'center'); }
+  if (overHi <= 1e-9 && overLo <= 1e-9) lab('✓ fits inside the limits', xm, yM + 28, C.good, 'center');
+  cx.globalAlpha = 1;
+  return d;
+}
+function cmpCaption(d, step) {
+  if (!d) return step === 1 ? 'A ball is good if it bounces between the limits, <b>LTL = 30</b> and <b>UTL = 34</b> inches. Outside them, it is a defect. (Run the day: the next steps use the <span class="xm">X̄</span> and σ of the tested balls.)' : 'Run the day first: the picture needs at least an hour of tested balls (10) for <span class="xm">X̄</span> and σ.';
+  const m = d.m, sd = d.sd, k = d.k, dLo = m - SPEC.ltl, dHi = SPEC.utl - m, safe = Math.min(dLo, dHi), L = k * sd;
+  const eq = Math.abs(dLo - dHi) < 0.005, side = eq ? 'the same on both sides' : 'on the ' + (dHi < dLo ? 'UTL' : 'LTL') + ' side';
+  const within = (j) => d.xs.filter((x) => x >= m - j * sd - 1e-9 && x <= m + j * sd + 1e-9).length;
+  if (step === 1) return 'A ball is good if it bounces between the limits, <b>LTL = 30</b> and <b>UTL = 34</b> inches. Outside them, it is a defect.';
+  if (step === 2) return safe <= 0 ? `${d.who} average <span class="xm">X̄</span> = ${f2(m)} inches, at or outside a limit: there is no safety distance, so the line cannot be capable.`
+    : `${d.who} average <b><span class="xm">X̄</span> = ${f2(m)}</b> inches. The <b>safety distance</b> is the room between the average and the nearer limit: min{${f2(m)} − 30, 34 − ${f2(m)}} = <b>${f2(safe)} inches</b>, ${side}.`;
+  if (step === 3) return `Balls do not all bounce at the average. <b>The mistake</b> is how far a ball strays from it. With σ = ${f2(sd)} inches, 68% of balls stray less than 1σ = ${f2(sd)}, 95% less than 2σ = ${f2(2 * sd)}, and 99.7% less than <b>3σ = ${f2(3 * sd)} inches</b>. Counting the ${int(d.n)} balls: ${int(within(1))}, ${int(within(2))} and ${int(within(3))}.`;
+  if (step === 4) {
+    if (safe <= 0) return `Compare. The average <span class="xm">X̄</span> = ${f2(m)} is already ${dHi < 0 ? 'above UTL' : dLo < 0 ? 'below LTL' : 'on a limit'}: there is no safety distance at all, so even a small mistake makes defects. <b>Not capable at the 3σ level.</b>`;
+    if (L <= safe + 1e-9) return `Compare. The 3σ mistake (${f2(L)} in) fits inside the safety distance (${f2(safe)} in): even a 3σ mistake stays within the limits. <b>Capable at the 3σ level.</b>`;
+    const where = eq ? 'both limits, so in the long run some balls will bounce too high and some too low' : (dHi < dLo ? 'UTL, so in the long run some balls will bounce too high' : 'LTL, so in the long run some balls will bounce too low');
+    return `Compare. The 3σ mistake (${f2(L)} in) is longer than the safety distance (${f2(Math.max(0, safe))} in): it runs ${f2(L - safe)} inches past ${where}. <b>Not capable at the 3σ level.</b>`;
+  }
+  const c = Number(f2(safe)) / Number(f2(L));   // from the rounded numbers shown, like the formula box
+  if (safe <= 0) return `With no safety distance, C<sub>pk</sub> = ${n2(safe)} / ${f2(L)} = <b>${n2(c)}</b>: ${safe < 0 ? 'negative when the average is outside the limits' : 'zero'}, so the line is not capable.`;
+  return `The capability index puts the comparison into one number: C<sub>pk</sub> = safety distance / 3σ mistake = ${f2(safe)} / ${f2(L)} = <b>${f2(c)}</b>. ${c >= 1 - 1e-9 ? 'At least 1: the mistake fits, so the line is capable.' : 'Below 1: the mistake does not fit, so the line is not capable.'} A smaller σ means a smaller mistake: try the σ slider.`;
+}
+function capPlug() {   // the formula box at the end of the capability tab, with the picture's numbers
+  const d = cmpData();
+  if (!d) return 'Run the day to plug in the numbers.';
+  const m = d.m, L = '(' + d.k + ' × ' + f2(d.sd) + ')', kd = Number(f2(d.k * d.sd)), a = Number(f2(m - SPEC.ltl)) / kd, b = Number(f2(SPEC.utl - m)) / kd, c = Math.min(a, b);
+  return `${d.who}: C<sub>pk</sub> = min{(${f2(m)} − 30) / ${L}, (34 − ${f2(m)}) / ${L}} = min{${n2(a)}, ${n2(b)}} = <b>${n2(c)}</b>: ${c >= 1 - 1e-9 ? 'capable' : 'not capable'} at the ${d.k}σ level.`;
+}
+let capPlugLast = '';
+function cmpGo(step) { CMP.step = Math.max(1, Math.min(CMP_STEPS, step)); CMP.t0 = performance.now() / 1000; cmpSyncNav(); }
+function cmpSyncNav() { $('#cmp-count').textContent = 'Step ' + CMP.step + ' of ' + CMP_STEPS; $('#cmp-back').disabled = CMP.step === 1; $('#cmp-next').disabled = CMP.step === CMP_STEPS; }
+$('#cmp-back').addEventListener('click', () => cmpGo(CMP.step - 1));
+$$('[data-jump]').forEach((b) => b.addEventListener('click', () => {
+  const el = b.dataset.jump === 'rail' ? $('.rail-card') : $('.stage');
+  el.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+  el.setAttribute('tabindex', '-1'); el.focus({ preventScroll: true });   // the next Tab continues from there
+}));
+$('#cmp-next').addEventListener('click', () => cmpGo(CMP.step + 1));
+
+// ---------- C_pk practice: each problem is one simulated day on a line with random settings
+const PR = { done: 0, right: 0, streak: 0, cur: null, checked: false };
+function newProblem() {
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  for (let tries = 0; tries < 500; tries++) {
+    const k = pick([3, 3, 3, 2, 2, 1]), aim = Math.round((30.8 + Math.random() * 2.4) * 10) / 10;
+    const c = 0.45 + Math.random() * 1.05; if (c > 0.9 && c < 1.1) continue;   // target C_pk, about half capable
+    const near = Math.min(aim - SPEC.ltl, SPEC.utl - aim);
+    const sd = Math.min(1.5, Math.max(0.2, Math.round(near / (k * c) / 0.05) * 0.05));
+    const seed = 1 + Math.floor(Math.random() * 999999), ln = new Line({ aim, sd: Number(sd.toFixed(2)) }, seed);
+    ln.advance(DAY_MIN);
+    const xs = ln.tests.map((o) => o.x), st = statsOf(xs), m = Number(f2(st.mean)), sdR = Number(f2(st.sd));
+    const safe = Number(f2(Math.min(m - SPEC.ltl, SPEC.utl - m))), kd = Number(f2(k * sdR));
+    if (safe < 0.1 || sdR <= 0 || Math.abs(safe / kd - 1) < 0.04) continue;
+    PR.cur = { k, m, sd: sdR, safe, kd, cpk: safe / kd, ok: safe / kd >= 1, xs, n: xs.length, lineNo: 1 + Math.floor(Math.random() * 6), ln, seed };
+    S.two = false; S.histSrc = 'today'; S.k = k; S.shift = 0; longRes = null;
+    lines = [ln]; seeds = [seed]; anims = finishedAnims();
+    S.sceneLabel = 'Line ' + PR.cur.lineNo + ' · full day tested';
+    break;
+  }
+  setPlaying(false); PR.checked = false; CMP.prob = null; cmpCard.hidden = true;
+  renderProblem(); syncHistButtons(); updateLive(); dirty = true;
+}
+function restoreProblem() {   // back on the practice tab: the same problem, answers and feedback
+  const q = PR.cur;
+  S.two = false; S.histSrc = 'today'; S.k = q.k; S.shift = 0; longRes = null;
+  lines = [q.ln]; seeds = [q.seed]; anims = finishedAnims();
+  S.sceneLabel = 'Line ' + q.lineNo + ' · full day tested';
+  setPlaying(false);
+  if (PR.checked) CMP.prob = { m: q.m, sd: q.sd, k: q.k, xs: q.xs, n: q.n, who: WHO.prac };
+  syncHistButtons(); updateLive(); dirty = true;
+}
+function renderProblem() {
+  const q = PR.cur;
+  $('#prac-q').innerHTML = `<p>Line ${q.lineNo} ran a full day, and quality control tested <b>100 balls</b> (the histogram shows them). This day's balls: <b><span class="xm">X̄</span> = ${f2(q.m)} in</b>, <b>σ = ${f2(q.sd)} in</b>. The limits are LTL = 30 and UTL = 34 inches.</p>
+    <p class="prac-ask">Is the line capable at the <b>${q.k}σ level</b>?</p>`;
+  $$('#panel-prac .pk').forEach((el) => { el.textContent = q.k + 'σ'; });
+  $$('#panel-prac .pk-k').forEach((el) => { el.textContent = String(q.k); });
+  ['#pa-safe', '#pa-kd', '#pa-cpk'].forEach((id) => { $(id).value = ''; });
+  $$('input[name="pa-ok"]').forEach((el) => { el.checked = false; });
+  $$('#prac-form .mark').forEach((el) => { el.textContent = ''; el.className = 'mark'; });
+  $('#prac-fb').innerHTML = '';
+  renderScore();
+}
+function sdMax(safe, k) {   // safe / k cut (not rounded) to two decimals, so the bound is never too big: 2.00 / 3 = 0.666…
+  const x = safe / k, c = Math.floor(x * 1000 + 1e-9) / 1000;
+  if (Math.abs(x - Number(x.toFixed(2))) < 1e-9) return x.toFixed(2);
+  return Math.abs(x - c) < 1e-9 ? c.toFixed(3) : c.toFixed(3) + '…';
+}
+function renderScore() {
+  $('#prac-score').textContent = PR.done ? `Problems checked: ${PR.done} · all four right: ${PR.right} · in a row: ${PR.streak} (not graded, not saved)` : 'Not graded and not saved: practice as often as you like.';
+}
+$('#prac-new').addEventListener('click', newProblem);
+$('#prac-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const q = PR.cur; if (!q) return;
+  const num = (id) => { const v = parseFloat(String($(id).value).replace(',', '.')); return isFinite(v) ? v : null; };
+  const close = (v, t) => v !== null && Math.abs(v - t) <= 0.0101;
+  const okPick = $('input[name="pa-ok"]:checked');
+  if (!okPick && ['#pa-safe', '#pa-kd', '#pa-cpk'].every((id) => !String($(id).value).trim())) { $('#prac-fb').innerHTML = '<p>Type your answers first, then click Check.</p>'; return; }
+  const res = { safe: close(num('#pa-safe'), q.safe), kd: close(num('#pa-kd'), q.kd), ok: !!okPick && (okPick.value === 'yes') === q.ok, cpk: close(num('#pa-cpk'), Number(f2(q.cpk))) };
+  const all = res.safe && res.kd && res.ok && res.cpk;
+  if (!PR.checked) { PR.done++; if (all) { PR.right++; PR.streak++; } else PR.streak = 0; }
+  PR.checked = true;
+  const mark = (id, good, ans) => { const el = $(id); el.className = 'mark ' + (good ? 'ok' : 'bad'); el.textContent = good ? '✓ Correct' : '✗ Answer: ' + ans; };
+  mark('#pm-safe', res.safe, f2(q.safe) + ' in'); mark('#pm-kd', res.kd, f2(q.kd) + ' in');
+  mark('#pm-ok', res.ok, q.ok ? 'Yes' : 'No'); mark('#pm-cpk', res.cpk, f2(q.cpk));
+  const k = q.k, nearTxt = Math.abs((q.m - SPEC.ltl) - (SPEC.utl - q.m)) < 0.005 ? 'both sides are equal' : 'the ' + (SPEC.utl - q.m < q.m - SPEC.ltl ? 'UTL' : 'LTL') + ' side is nearer';
+  const outN = q.xs.filter((x) => x < SPEC.ltl || x > SPEC.utl).length;
+  const lowK = q.ok && k < 3 ? ` Capable at the ${k}σ level only means the ${k}σ mistake fits: ${RULE_PCT[k]} of balls stray less than that, so some balls can still fall outside 30–34 ${outN ? '(the red bars in the histogram)' : 'in the long run (none did today)'}.` : '';
+  $('#prac-fb').innerHTML = `<p class="prac-verdict ${all ? 'ok' : 'bad'}">${all ? 'All four right.' : 'Not quite. The solution:'}</p>
+    <p><b>1. Safety distance</b> = <span class="formula">min{<span class="xm">X̄</span> − LTL, UTL − <span class="xm">X̄</span>} = min{${f2(q.m)} − 30, 34 − ${f2(q.m)}} = min{${f2(q.m - SPEC.ltl)}, ${f2(SPEC.utl - q.m)}} = <b>${f2(q.safe)} in</b></span> (${nearTxt}).</p>
+    <p><b>2. The mistake</b> at the ${k}σ level = <span class="formula">${k} × ${f2(q.sd)} = <b>${f2(q.kd)} in</b></span>: ${RULE_PCT[k]} of balls stray less than this from the average.</p>
+    <p><b>3. Compare.</b> <span class="formula">${f2(q.kd)} ${q.ok ? '≤' : '>'} ${f2(q.safe)}</span>: the mistake ${q.ok ? 'fits inside' : 'is longer than'} the safety distance, so the line is <b>${q.ok ? 'capable' : 'not capable'}</b> at the ${k}σ level.${lowK}</p>
+    <p><b>4. C<sub>pk</sub></b> = <span class="formula">safety distance / mistake = ${f2(q.safe)} / ${f2(q.kd)} = <b>${f2(q.cpk)}</b></span> (${q.ok ? 'at least 1' : 'below 1'}). With the formula on slide 12: <span class="formula">min{(${f2(q.m)} − 30) / (${k} × ${f2(q.sd)}), (34 − ${f2(q.m)}) / (${k} × ${f2(q.sd)})} = min{${f2(Number(f2(q.m - SPEC.ltl)) / q.kd)}, ${f2(Number(f2(SPEC.utl - q.m)) / q.kd)}} = <b>${f2(q.cpk)}</b></span>.</p>
+    <p class="label-sm">The picture under the histogram shows the comparison. For the line to be capable at the ${k}σ level, σ could be at most ${f2(q.safe)} / ${k} = ${sdMax(q.safe, k)} in.</p>`;
+  CMP.prob = { m: q.m, sd: q.sd, k: q.k, xs: q.xs, n: q.n, who: WHO.prac }; cmpCard.hidden = false; dirty = true;
+  renderScore();
+});
+
+// ---------- control chart
+const ctl = $('#ctl'), cg = ctl.getContext('2d'), ctip = $('#ctl-tip');
+let cHover = null, cPts = [];
+const SHOW_HOURS = 30;   // three days
+function drawCtl() {
+  if (!C.ink || !lines.length || S.two) return;
+  const H = 230, w = canvasSetup(ctl, cg, H), ln = lines[0];
+  const pad = { l: 46, r: 44, t: 14, b: 26 }, pw = w - pad.l - pad.r, ph = H - pad.t - pad.b;
+  const pts = ln.hours.slice(-SHOW_HOURS), first = ln.hours.length - pts.length;
+  const lim = limitsOf(ln.p);
+  { const last = pts[pts.length - 1], sig = pts.filter((q) => q.flags.length).length;
+    const lbl = 'Control chart of the hourly average bounce. ' + (last ? pts.length + ' hourly points shown; latest ' + f2(last.xbar) + ' inches (Day ' + clockOf(last.t).day + ', ' + clockOf(last.t).txt + '); central line ' + f2(last.cl) + ', control limits ' + f2(last.lcl) + ' to ' + f2(last.ucl) + ' inches; ' + (sig ? sig + ' point' + (sig > 1 ? 's' : '') + ' with a signal.' : 'no signals.') : 'No points yet.');
+    if (ctl.getAttribute('aria-label') !== lbl) ctl.setAttribute('aria-label', lbl); }
+  let lo = lim.lcl, hi = lim.ucl;
+  for (const p of pts) { lo = Math.min(lo, p.lcl, p.xbar); hi = Math.max(hi, p.ucl, p.xbar); }
+  const span = hi - lo; lo -= span * 0.15; hi += span * 0.15;
+  const slot = pw / Math.max(DAY_MIN / 60, Math.min(SHOW_HOURS, pts.length)), X = (j) => pad.l + (j + 0.5) * slot, Y = (v) => pad.t + ph - (v - lo) / (hi - lo) * ph;
+  cg.font = '11px "IBM Plex Mono", ui-monospace, Menlo, monospace';
+  // y grid
+  const stepRaw = (hi - lo) / 4, mag = Math.pow(10, Math.floor(Math.log10(stepRaw))), st = [1, 2, 2.5, 5, 10].map((q) => q * mag).find((q) => q >= stepRaw) || stepRaw;
+  cg.strokeStyle = C.rule; cg.lineWidth = 1; cg.fillStyle = C.muted; cg.textAlign = 'right'; cg.textBaseline = 'middle';
+  for (let v = Math.ceil(lo / st) * st; v <= hi; v += st) { const y = Math.round(Y(v)) + 0.5; cg.beginPath(); cg.moveTo(pad.l, y); cg.lineTo(w - pad.r, y); cg.stroke(); cg.fillText(v.toFixed(st < 0.1 ? 2 : 1), pad.l - 6, y); }
+  // limits: one segment per hour (they move only when the settings change)
+  const segs = pts.length ? pts.map((p, j) => ({ j, cl: p.cl, ucl: p.ucl, lcl: p.lcl })) : [];
+  const drawLimit = (key, color, dash) => {
+    cg.strokeStyle = color; cg.lineWidth = 1.5; cg.setLineDash(dash);
+    cg.beginPath();
+    if (!segs.length) { cg.moveTo(pad.l, Y(lim[key])); cg.lineTo(w - pad.r, Y(lim[key])); }
+    segs.forEach((s, k) => { const xa = pad.l + s.j * slot, xb = k === segs.length - 1 ? w - pad.r : pad.l + (s.j + 1) * slot; cg.moveTo(xa, Y(s[key])); cg.lineTo(xb, Y(s[key])); });
+    cg.stroke(); cg.setLineDash([]);
+  };
+  drawLimit('ucl', C.ctl, [6, 4]); drawLimit('lcl', C.ctl, [6, 4]); drawLimit('cl', C.muted, []);
+  const endL = segs.length ? segs[segs.length - 1] : lim;
+  cg.textAlign = 'left'; cg.font = '700 10px "IBM Plex Mono", ui-monospace, monospace';
+  cg.fillStyle = C.ctl; cg.fillText('UCL', w - pad.r + 4, Y(endL.ucl)); cg.fillText('LCL', w - pad.r + 4, Y(endL.lcl));
+  cg.fillStyle = C.muted; cg.fillText('CL', w - pad.r + 4, Y(endL.cl));
+  // day separators
+  cg.font = '11px "IBM Plex Mono", ui-monospace, monospace'; cg.textAlign = 'left'; cg.textBaseline = 'top';
+  pts.forEach((p, j) => {
+    const idx = first + j;
+    if (idx % (DAY_MIN / 60) === 0) {
+      const x = Math.round(pad.l + j * slot) + 0.5;
+      if (j > 0) { cg.strokeStyle = C.rule; cg.setLineDash([3, 3]); cg.beginPath(); cg.moveTo(x, pad.t); cg.lineTo(x, pad.t + ph); cg.stroke(); cg.setLineDash([]); }
+      cg.fillStyle = C.muted; cg.fillText('Day ' + (p.day + 1), x + 3, pad.t + ph + 6);
+    }
+  });
+  if (!pts.length) {
+    cg.fillStyle = C.muted; cg.textAlign = 'center'; cg.textBaseline = 'middle';
+    wrapText(cg, 'The first point appears at 8:00 am (the average of the first 10 tested balls).', pad.l + pw / 2, pad.t + ph / 2, pw - 8, 16);
+    cPts = []; ctip.hidden = true; return;
+  }
+  // pattern spans
+  const last = pts[pts.length - 1];
+  pts.forEach((p, j) => {
+    if (p.span && p === last) { cg.fillStyle = C.dangerSoft; const xa = pad.l + Math.max(0, j - p.span + 1) * slot, xb = pad.l + (j + 1) * slot; cg.fillRect(xa, pad.t, xb - xa, ph); }
+  });
+  // line and points
+  cg.strokeStyle = C.ptLine; cg.lineWidth = 2; cg.lineJoin = 'round'; cg.beginPath();
+  pts.forEach((p, j) => { if (j === 0) cg.moveTo(X(j), Y(p.xbar)); else cg.lineTo(X(j), Y(p.xbar)); });
+  cg.stroke();
+  cPts = pts.map((p, j) => {
+    const flagged = p.flags.length > 0, out = p.xbar > p.ucl || p.xbar < p.lcl;
+    cg.fillStyle = out || flagged ? C.danger : C.ink; cg.beginPath(); cg.arc(X(j), Y(p.xbar), out ? 5 : 4, 0, 7); cg.fill();
+    if (flagged) { cg.strokeStyle = C.danger; cg.lineWidth = 1.5; cg.beginPath(); cg.arc(X(j), Y(p.xbar), 8.5, 0, 7); cg.stroke(); }
+    return { x: X(j), y: Y(p.xbar), p };
+  });
+  if (cHover !== null) {
+    let best = null; for (const q of cPts) if (!best || Math.abs(q.x - cHover) < Math.abs(best.x - cHover)) best = q;
+    if (best && Math.abs(best.x - cHover) < slot) {
+      const a = clockOf(best.p.t - 60 + 1e-6), b = clockOf(best.p.t);
+      ctip.hidden = false; ctip.style.left = best.x + 'px'; ctip.style.top = Math.max(18, best.y) + 'px';
+      ctip.textContent = 'Day ' + a.day + ', ' + a.txt + '–' + b.txt + ': average ' + f2(best.p.xbar) + ' in' + (best.p.flags.length ? ' (signal)' : '');
+    } else ctip.hidden = true;
+  } else ctip.hidden = true;
+}
+ctl.addEventListener('pointermove', (e) => { const r = ctl.getBoundingClientRect(); cHover = e.clientX - r.left; drawCtl(); });
+ctl.addEventListener('pointerleave', () => { cHover = null; drawCtl(); });
+
+// ---------- main loop
+let lastFrame = performance.now(), lastUi = 0, lastTests = -1, lastLayoutTwo = null, needLayout = false, frameErrors = 0;
+function frame(now) {
+  requestAnimationFrame(frame);   // schedule first, so one bad frame cannot stop the animation
+  try { step(now); frameErrors = 0; }
+  catch (err) { console.error(err); if (++frameErrors === 30) showError(err && err.message); }
+}
+function step(now) {
+  const dt = Math.min(0.1, Math.max(0, (now - lastFrame) / 1000)); lastFrame = now;
+  if (needLayout || lastLayoutTwo !== S.two) { needLayout = false; lastLayoutTwo = S.two; layoutScene(); dirty = true; }
+  if (S.playing && lines.length) {
+    let T = lines[0].t + dt * SPEEDS[S.speedIdx], stop = false;
+    if (S.pause) { const end = (dayOf(lines[0].t + 1e-6) + 1) * DAY_MIN; if (T >= end - 1e-9) { T = end; stop = true; } }
+    lines.forEach((ln) => ln.advance(T));
+    if (stop) setPlaying(false);
+  }
+  consumeTests(now / 1000);
+  drawScene(now / 1000, S.playing ? dt : 0);
+  const nTests = lines.reduce((a, ln) => a + ln.tests.length, 0);
+  if (dirty || nTests !== lastTests || now - lastUi > 500) {
+    lastUi = now; lastTests = nTests; dirty = false;
+    updateLive(); drawHist(); drawCtl();
+    if (S.tab === 'cap') { const t = capPlug(); if (t !== capPlugLast) { capPlugLast = t; $('#cap-plug').innerHTML = t; } }
+  }
+  if (!cmpCard.hidden) {
+    const d = drawCmp(now), txt = cmpCaption(d, CMP.prob ? CMP_STEPS : CMP.step);
+    if (txt !== cmpTextLast) { cmpTextLast = txt; $('#cmp-text').innerHTML = txt; }
+    const said = CMP.prob ? 'prac' : CMP.step;   // screen readers hear a step once, not every new ball
+    if (said !== cmpSaid) { cmpSaid = said; $('#cmp-live').textContent = CMP.prob ? '' : 'Step ' + CMP.step + ' of ' + CMP_STEPS + '. ' + $('#cmp-text').textContent; }
+    const al = CMP.prob ? CMP_LABEL_PRAC : CMP_LABEL;
+    if (cmpCv.getAttribute('aria-label') !== al) cmpCv.setAttribute('aria-label', al);
+  } else cmpSaid = null;
+}
+
+// ---------- boot
+function boot() {
+  readTheme();
+  buildControls();
+  const fromHash = (location.hash || '').replace('#', '');
+  const first = TAB_KEYS.includes(fromHash) ? fromHash : 'acc';
+  S.tab = first;
+  loadPreset(first === 'prac' ? 'cap' : first);   // practice makes its own line in selectTab
+  selectTab(first, { load: false, force: true });
+  layoutScene(); lastLayoutTwo = S.two;
+  setPlaying(!reduceMotion && first !== 'prac');   // a practice problem is a finished day
+  // Resize the scene on the next frame, not inside the observer: resizing there re-triggers the observer.
+  if ('ResizeObserver' in window) new ResizeObserver(() => { needLayout = true; }).observe(scene.parentElement);
+  else window.addEventListener('resize', () => { needLayout = true; });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { dirty = true; });
+  window.__lab = { S, CMP, get lines() { return lines; }, get anims() { return anims; }, frame, selectTab, setPlaying, advanceTo: (T) => { lines.forEach((ln) => ln.advance(T)); dirty = true; } };
+  requestAnimationFrame(frame);
+}
+boot();
+})();
+</script>
+</body>
+</html>
