@@ -1,0 +1,1402 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pickleball Order Forecast</title>
+<meta name="description" content="Interactive forecasting case for OSCM 303: monthly orders at a pickleball plant, demand components, moving averages, exponential smoothing, and MFE and MAD.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: the order chart on the left (chart, the month's calculation, accuracy table); a lesson rail on the right with one tab per part of the slides. */
+:root {
+  --bg: #f2f5f2; --surface: #ffffff; --surface-2: #e7ede8; --ink: #15201b; --ink-2: #3f4d46; --muted: #5c6962; --rule: #d2dbd4;
+  --accent: #006f51; --accent-strong: #00563f; --on-accent: #ffffff; --accent-soft: #dcefe6; --gold: #e8a91b; --gold-soft: #fbf0d6; --danger: #b3261e; --danger-soft: #fbe3e1;
+  --focus: #00563f; --good: #0f7a55;
+  --bar: #cfdcd4; --bar-edge: #5f7a6c; --bar-next: #eef2ef; --cursor: #a86f00;
+  --m-sma1: #c2571a; --m-sma2: #1f5aa8; --m-wma: #6a3d9a; --m-es: #00796b; --m-fit: #8a5300; --m-sma1-text: #a3471a; --m-es-text: #00564c;
+  --layer-trend: #3f4d46; --layer-curve: #9a6500; --layer-rand: #b3261e;
+  --f-display: "Archivo", "Arial Narrow", "Helvetica Neue", system-ui, sans-serif;
+  --f-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --radius: 10px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1412; --surface: #17201c; --surface-2: #1f2a25; --ink: #e6ece8; --ink-2: #bac6bf; --muted: #95a29b; --rule: #2d3933;
+    --accent: #43b98e; --accent-strong: #63cba3; --on-accent: #062519; --accent-soft: #173a2d; --gold: #f2c14e; --gold-soft: #33290f; --danger: #f2948b; --danger-soft: #3d1d1a;
+    --focus: #f2c14e; --good: #4fc193;
+    --bar: #34443d; --bar-edge: #7d968a; --bar-next: #1c2622; --cursor: #f2c14e;
+    --m-sma1: #f08a4b; --m-sma2: #7fb0f5; --m-wma: #c09cf0; --m-es: #4fd1c5; --m-fit: #f0b45a; --m-sma1-text: #f08a4b; --m-es-text: #4fd1c5;
+    --layer-trend: #bac6bf; --layer-curve: #f2c14e; --layer-rand: #f2948b;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1412; --surface: #17201c; --surface-2: #1f2a25; --ink: #e6ece8; --ink-2: #bac6bf; --muted: #95a29b; --rule: #2d3933;
+  --accent: #43b98e; --accent-strong: #63cba3; --on-accent: #062519; --accent-soft: #173a2d; --gold: #f2c14e; --gold-soft: #33290f; --danger: #f2948b; --danger-soft: #3d1d1a;
+  --focus: #f2c14e; --good: #4fc193;
+  --bar: #34443d; --bar-edge: #7d968a; --bar-next: #1c2622; --cursor: #f2c14e;
+  --m-sma1: #f08a4b; --m-sma2: #7fb0f5; --m-wma: #c09cf0; --m-es: #4fd1c5; --m-fit: #f0b45a; --m-sma1-text: #f08a4b; --m-es-text: #4fd1c5;
+  --layer-trend: #bac6bf; --layer-curve: #f2c14e; --layer-rand: #f2948b;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.5; }
+[hidden] { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.page { max-width: 1320px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 48px; display: grid; gap: 24px; }
+@media (min-width: 700px) { .page { padding-inline: 28px; } }
+
+h1, h2, h3 { font-family: var(--f-display); font-stretch: 78%; text-wrap: balance; margin: 0; line-height: 1.1; }
+h1 { font-size: clamp(2rem, 4.6vw, 3.1rem); font-weight: 800; letter-spacing: -0.01em; }
+h2 { font-size: 1.45rem; font-weight: 750; }
+h3 { font-size: 1.12rem; font-weight: 700; }
+p { margin: 0; }
+b, strong { font-weight: 700; }
+.eyebrow { font-family: var(--f-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.masthead { display: grid; gap: 8px; }
+.masthead .lede { max-width: 78ch; color: var(--ink-2); font-size: 1.04rem; }
+.masthead h1 span { color: var(--accent); }
+
+.app { display: grid; gap: 24px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+@media (min-width: 1040px) { .app { grid-template-columns: minmax(0, 1.7fr) minmax(330px, 1fr); } }
+.stage, .rail { min-width: 0; display: grid; gap: 16px; }
+
+.card { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); padding: 12px 14px; display: grid; gap: 10px; min-width: 0; }
+.chart-head { display: flex; flex-wrap: wrap; gap: 6px 16px; justify-content: space-between; align-items: baseline; }
+.chart-cap { font-size: 0.95rem; font-weight: 700; }
+.chart-cap span { font-weight: 400; color: var(--muted); }
+.chart-wrap { position: relative; }
+#chart { display: block; width: 100%; touch-action: manipulation; }
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-size: 0.8rem; padding: 5px 8px; border-radius: 6px; white-space: nowrap; transform: translate(-50%, -110%); font-variant-numeric: tabular-nums; z-index: 2; line-height: 1.35; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.82rem; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend svg { flex: none; }
+.status { font-size: 0.95rem; color: var(--ink-2); min-height: 1.5em; }
+.status b { color: var(--ink); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.label-sm { font-size: 0.85rem; color: var(--muted); }
+select { font: inherit; font-size: 0.9rem; padding: 5px 8px; border-radius: 7px; border: 1px solid var(--muted); background: var(--surface); color: var(--ink); max-width: 100%; }
+
+.btn { font: inherit; font-size: 0.93rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--rule); background: var(--surface-2); color: var(--ink); padding: 7px 13px; cursor: pointer; line-height: 1.25; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.primary:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+.check { display: inline-flex; gap: 8px; align-items: center; font-size: 0.92rem; }
+.check input { accent-color: var(--accent); width: 16px; height: 16px; }
+.jump { display: none; justify-self: start; }
+@media (max-width: 1039px) { .jump { display: inline-block; } }
+.stage:focus, .rail-card:focus { outline: none; }
+
+.formula { font-family: var(--f-mono); font-size: 0.86rem; line-height: 1.65; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.formula sub { font-size: 0.72em; }
+.calc { display: grid; gap: 6px; font-size: 0.94rem; }
+.calc .formula { font-size: 0.88rem; }
+.calc .verdict { font-weight: 700; }
+.pos { color: var(--danger); }
+.errs .cur { font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
+.neg { color: var(--m-sma2); }
+
+table { border-collapse: collapse; width: 100%; font-size: 0.88rem; font-variant-numeric: tabular-nums; }
+caption { text-align: left; font-weight: 700; font-size: 0.9rem; padding: 0 0 6px; color: var(--ink); }
+th, td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+th { font-weight: 700; color: var(--ink-2); background: var(--surface-2); font-size: 0.8rem; }
+thead th { white-space: normal; vertical-align: bottom; }
+#acc-table tbody th.l { white-space: normal; min-width: 10em; }
+th.l, td.l { text-align: left; }
+tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
+tr.win th, tr.win td { background: var(--accent-soft); }
+tr.cur th, tr.cur td { background: var(--gold-soft); }
+tfoot td, tfoot th { border-top: 2px solid var(--rule); border-bottom: 0; font-weight: 700; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 8px; }
+.table-wrap:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.sw { display: inline-block; width: 18px; height: 0; border-top: 3px solid; vertical-align: 4px; margin-right: 6px; }
+details.card, details.starbox { display: block; min-width: 0; }
+details.card > * + *, details.starbox > * + * { margin-top: 8px; }
+tfoot td { white-space: normal; }
+.data-card summary { cursor: pointer; font-weight: 700; color: var(--accent); font-size: 0.93rem; }
+.data-card[open] summary { margin-bottom: 8px; }
+
+/* Rail */
+.rail-card { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px; border-bottom: 1px solid var(--rule); }
+[role="tab"] { flex: 1 1 auto; font: inherit; font-size: 0.86rem; font-weight: 700; line-height: 1.2; text-align: center; padding: 7px 10px; border-radius: 7px; border: 0; background: transparent; color: var(--ink-2); cursor: pointer; }
+[role="tab"]:hover { background: var(--surface-2); }
+[role="tab"][aria-selected="true"] { background: var(--accent); color: var(--on-accent); }
+[role="tab"]:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+[role="tabpanel"] { padding: 16px; display: grid; gap: 14px; }
+[role="tabpanel"] > p { max-width: 62ch; }
+.from-slide { font-family: var(--f-mono); font-size: 0.8rem; letter-spacing: 0.02em; color: var(--accent); }
+
+.controls { display: grid; gap: 12px; }
+.ctl { display: grid; gap: 4px; border: 0; margin: 0; padding: 0; min-width: 0; }
+.ctl-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.ctl label, .ctl legend { font-weight: 700; font-size: 0.93rem; padding: 0; }
+.ctl .check { font-weight: 700; }
+.ctl output { font-family: var(--f-mono); font-size: 0.88rem; font-variant-numeric: tabular-nums; color: var(--accent); font-weight: 600; }
+.ctl-hint { font-size: 0.82rem; color: var(--muted); }
+.wgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.wgrid label { display: grid; gap: 2px; font-weight: 400; font-size: 0.84rem; color: var(--ink-2); }
+.wgrid input { font: inherit; font-family: var(--f-mono); font-size: 0.92rem; width: 100%; padding: 5px 6px; border: 1px solid var(--muted); border-radius: 6px; background: var(--surface); color: var(--ink); }
+.wsum { font-size: 0.86rem; font-weight: 700; }
+.wsum.bad { color: var(--danger); }
+.wsum.ok { color: var(--good); }
+.opts { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.opts label { font-weight: 400; display: inline-flex; gap: 6px; align-items: center; font-size: 0.93rem; }
+.opts input { accent-color: var(--accent); }
+
+.predict { border-left: 3px solid var(--gold); padding: 2px 0 2px 12px; display: grid; gap: 6px; }
+.predict p { font-size: 0.95rem; }
+details summary { cursor: pointer; font-weight: 700; color: var(--accent); font-size: 0.92rem; }
+details[open] summary { margin-bottom: 4px; }
+.predict details p, .challenges details p { font-size: 0.93rem; color: var(--ink-2); }
+ul.challenges { margin: 0; padding-left: 1.2em; display: grid; gap: 12px; font-size: 0.95rem; }
+.note-star { font-size: 0.82rem; color: var(--muted); }
+.defs { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; font-size: 0.95rem; }
+.fbox { background: var(--surface-2); border-radius: 8px; padding: 12px 14px; display: grid; gap: 8px; min-width: 0; }
+.fbox p { font-size: 0.93rem; color: var(--ink); }
+.starbox { border: 1px dashed var(--muted); border-radius: 8px; padding: 10px 12px; display: grid; gap: 8px; }
+.starbox p { font-size: 0.9rem; color: var(--ink-2); }
+
+/* practice */
+.prac-form { display: grid; gap: 10px; }
+.prac-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; }
+.prac-row > label { font-weight: 700; font-size: 0.93rem; }
+.prac-row input[type="text"] { font: inherit; font-family: var(--f-mono); width: 7em; padding: 5px 8px; border: 1px solid var(--muted); border-radius: 6px; background: var(--surface); color: var(--ink); }
+.prac-sub { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
+.view-row { display: none; margin: 8px 0 2px; }
+body[data-tab="acc"] .view-row { display: flex; }
+.btn.view[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.small { font-size: 0.8rem; padding: 3px 9px; font-weight: 700; }
+.btn.small[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }
+.mark { font-size: 0.86rem; font-weight: 700; }
+.mark:empty { display: none; }
+.mark.ok { color: var(--good); }
+.mark.bad { color: var(--danger); }
+.mark.none { color: var(--muted); font-weight: 400; }
+.prac-q { display: grid; gap: 8px; font-size: 0.97rem; }
+.prac-fb { display: grid; gap: 8px; font-size: 0.93rem; }
+.prac-fb:empty { display: none; }
+.prac-fb .formula { font-size: 0.84rem; }
+.prac-verdict { font-weight: 700; }
+.prac-verdict.ok { color: var(--good); }
+.prac-verdict.bad { color: var(--danger); }
+
+/* what each tab shows on the stage */
+body[data-tab="prac"] #cursor-row, body[data-tab="prac"] #calc-card, body[data-tab="prac"] #acc-card, body[data-tab="prac"] #data-card { display: none; }
+body[data-tab="comp"] #acc-card { display: none; }
+
+.how { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); padding: 12px 16px; }
+.how summary { font-size: 1rem; color: var(--ink); }
+.how ul { margin: 8px 0 4px; padding-left: 1.2em; display: grid; gap: 6px; max-width: 85ch; color: var(--ink-2); font-size: 0.95rem; }
+.err { background: var(--danger-soft); color: var(--danger); padding: 10px 14px; border-radius: 8px; font-weight: 700; }
+/* keep the header clear of a phone's notch or an app's top bar (viewport-fit=cover) */
+.page { padding-top: max(20px, env(safe-area-inset-top)); padding-bottom: max(48px, env(safe-area-inset-bottom)); }
+@media (max-width: 480px) { th, td { padding: 5px 5px; } table { font-size: 0.8rem; } }
+</style>
+</head>
+<body data-tab="comp">
+<div class="page">
+  <header class="masthead">
+    <p class="eyebrow">OSCM 303 · Forecasting</p>
+    <h1>Pickleball <span>Order</span> Forecast</h1>
+    <p class="lede">Fairfax Pickleball Works, the plant from the Drop Test, sells tournament balls by the case (100 balls a case) to clubs and sporting-goods stores. Molding takes time, so at the end of every month the plant must decide how many cases to make for next month. Make too few and orders go unfilled; make too many and cases pile up in the warehouse. So each month the planner forecasts next month's orders from past orders. The chart shows the last three years of orders and the one month nobody knows yet: next month.</p>
+  </header>
+  <noscript><p class="err">This page needs JavaScript. Open it in Chrome, Edge, Firefox, or Safari.</p></noscript>
+  <button class="btn jump" type="button" data-jump="rail">Questions for this tab ↓</button>
+  <p id="boot-error" class="err" hidden></p>
+
+  <main class="app">
+    <section class="stage" id="stage" tabindex="-1" aria-labelledby="stage-h">
+      <h2 id="stage-h" class="sr-only">Orders and forecasts</h2>
+      <div class="card">
+        <div class="chart-head">
+          <p class="chart-cap" id="chart-cap">Monthly orders <span>(cases)</span></p>
+          <div class="legend" id="legend"></div>
+        </div>
+        <div class="row view-row" id="acc-view-row" role="group" aria-label="What the chart shows">
+          <button class="btn view" type="button" data-accview="fc" aria-pressed="true">Forecasts and errors</button>
+          <button class="btn view" type="button" data-accview="mfe" aria-pressed="false">Show MFE</button>
+          <button class="btn view" type="button" data-accview="mad" aria-pressed="false">Show MAD</button>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="chart" role="img" aria-label="Bar chart of monthly orders.">Bar chart of monthly orders.</canvas>
+          <div class="tip" id="tip" hidden></div>
+        </div>
+        <p class="status" id="status" aria-live="polite"></p>
+        <div class="row" id="cursor-row">
+          <button class="btn" type="button" id="prev" aria-label="Previous month">◀ Month</button>
+          <button class="btn primary" type="button" id="play">Play</button>
+          <button class="btn" type="button" id="next" aria-label="Next month">Month ▶</button>
+          <label class="label-sm" for="month-sel">Month</label>
+          <select id="month-sel"></select>
+          <label class="label-sm" for="speed">Speed</label>
+          <select id="speed"><option value="1600">Slow</option><option value="900" selected>Normal</option><option value="400">Fast</option></select>
+        </div>
+      </div>
+
+      <div class="card" id="calc-card">
+        <h3 id="calc-h">This month</h3>
+        <div class="calc" id="calc"></div>
+      </div>
+
+      <div class="card" id="acc-card">
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Accuracy table (scrolls sideways)"><table id="acc-table"></table></div>
+        <p class="label-sm" id="acc-note"></p>
+      </div>
+
+      <details class="card data-card" id="data-card">
+        <summary>Show all the numbers (table)</summary>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Orders and forecasts table (scrolls sideways)"><table id="data-table"></table></div>
+      </details>
+    </section>
+
+    <aside class="rail" aria-label="Lessons">
+      <div class="rail-card" id="rail" tabindex="-1">
+        <button class="btn jump" type="button" data-jump="stage" style="margin: 8px 8px 0;">↑ Back to the chart</button>
+        <div class="tabs" role="tablist" aria-label="Parts of the Forecasting slides">
+          <button role="tab" type="button" id="tab-comp" aria-controls="panel-comp" aria-selected="true">Demand components</button>
+          <button role="tab" type="button" id="tab-ma" aria-controls="panel-ma" aria-selected="false" tabindex="-1">Moving averages</button>
+          <button role="tab" type="button" id="tab-es" aria-controls="panel-es" aria-selected="false" tabindex="-1">Exponential smoothing</button>
+          <button role="tab" type="button" id="tab-acc" aria-controls="panel-acc" aria-selected="false" tabindex="-1">MFE and MAD</button>
+          <button role="tab" type="button" id="tab-prac" aria-controls="panel-prac" aria-selected="false" tabindex="-1">Practice</button>
+          <button role="tab" type="button" id="tab-play" aria-controls="panel-play" aria-selected="false" tabindex="-1">Playground</button>
+        </div>
+
+        <section role="tabpanel" id="panel-comp" aria-labelledby="tab-comp">
+          <p class="from-slide">On the slides: time series and its components (slides 9–13)</p>
+          <h2>What drives the orders?</h2>
+          <p>The orders are a time series: one number per month, evenly spaced (slide 9). Three things move them:</p>
+          <ul class="defs">
+            <li><b>Trend</b>: a persistent upward or downward pattern over several years (slide 11). Here: the sport keeps growing.</li>
+            <li><b>Season</b>: a regular up-and-down pattern within each year (slide 12). Here: clubs play outdoors in spring and summer.</li>
+            <li><b>Random</b>: erratic, short, non-repeating changes (slide 13). Here: a rainy month, a tournament, a big club order.</li>
+          </ul>
+          <div class="controls" data-controls="layers trend amp sd seed"></div>
+          <p class="label-sm">The answers below are for the starting settings. <button class="btn" type="button" data-reset>Reset</button> brings them back.</p>
+          <div class="predict">
+            <p><b>Predict.</b> Orders are high every summer and low every winter. Which component is that? How many seasons does the pattern have in one year?</p>
+            <details><summary>Show the answer</summary>
+              <p>The <b>seasonal component</b>: clubs play outdoors in spring and summer, every year. With monthly data and a pattern that repeats every year, each month is one "season", so the pattern has <b>12</b> of them (the Year–Month row of the table on slide 12). Turn on <b>Show trend + season</b>: the curve peaks in June–July and bottoms out in December–January every year. The bars bounce around it because of the random part; in Year 3, August had the most orders.</p>
+            </details>
+          </div>
+          <div class="predict">
+            <p><b>Predict.</b> Each summer is higher than the one before. By how much do orders grow, roughly?</p>
+            <details><summary>Show the answer</summary>
+              <p>That is the <b>trend</b>: +10 cases a month, so each month is about 120 cases above the same month last year (12 × 10). Yearly totals grow by about 12 × 120 = 1,440 cases, give or take the random part: 7,895 cases in Year 1, 9,363 in Year 2, and 10,846 in Year 3. Turn on <b>Show trend line</b>: the straight line climbs steadily under the seasonal ups and downs.</p>
+            </details>
+          </div>
+          <div class="predict">
+            <p><b>Then try.</b> Turn on <b>Show the random part</b>, then switch <b>Random</b> off. What is left?</p>
+            <details><summary>Show the answer</summary>
+              <p>With Random off, every bar sits exactly on the trend + season curve: what is left can be predicted perfectly. The random part is what no forecasting method can predict (slide 13), which is why forecasts are seldom perfect (slide 5). Click any month to see its order split into level + trend + season + random.</p>
+            </details>
+          </div>
+        </section>
+
+        <section role="tabpanel" id="panel-ma" aria-labelledby="tab-ma" hidden>
+          <p class="from-slide">On the slides: simple and weighted moving averages (slides 14–30)</p>
+          <h2>Average the past</h2>
+          <p>A moving average forecasts next month as the average of the last <i>n</i> months (slide 16). Each month the window moves one month forward: the oldest month drops out and the newest comes in. The shaded months on the chart are the window for the selected month. The weighted moving average gives each month in the window its own weight (slide 25).</p>
+          <div class="controls" data-controls="n1 n2 w calcma"></div>
+          <p class="label-sm">The answers below are for the starting settings: 3 and 6 months, weights 0.5, 0.3, 0.2. <button class="btn" type="button" data-reset>Reset</button> brings them back.</p>
+          <div class="predict">
+            <p><b>Predict, then step.</b> Go to June, Year 3 (1,009 cases ordered). Which forecast is closer: the 3-month or the 6-month moving average?</p>
+            <details><summary>Show the answer</summary>
+              <p>The 3-month: (1,000 + 883 + 819) / 3 = 900.67 cases, off by 108.33. The 6-month average still includes the low months of last winter: 809.00, off by 200.00. A short window is <b>responsive</b>: it follows changes quickly. A long window is <b>stable</b>: one odd month moves it less, but it lags behind real changes (slide 24).</p>
+            </details>
+          </div>
+          <div class="predict">
+            <p><b>Predict.</b> Go to January, Year 3 and press <b>Play</b>. When are the 3- and 6-month averages below the actual orders, and when are they above?</p>
+            <details><summary>Show the answer</summary>
+              <p>Below in spring, while orders climb, and above in fall, while orders fall. An average only looks back, so it trails every turn. The 6-month average trails the most: its Year 3 errors run from +63.83 to +234.00 cases in March to June and from −68.17 to −146.83 cases in October to December.</p>
+            </details>
+          </div>
+          <div class="predict">
+            <p><b>Then try.</b> Set the weights to 0.34, 0.33, 0.33, then to 0.7, 0.2, 0.1. What happens to the weighted moving average?</p>
+            <details><summary>Show the answer</summary>
+              <p>With (almost) equal weights it is the 3-month simple moving average again. Putting 0.7 on last month makes it follow the newest data more closely: more responsive. Its Year 3 MAD drops from 74.24 (weights 0.5, 0.3, 0.2) to 62.80 cases. The weights must add up to 1 (slide 25); the flexibility to choose them is what makes the WMA better than the SMA (slide 30).</p>
+            </details>
+          </div>
+        </section>
+
+        <section role="tabpanel" id="panel-es" aria-labelledby="tab-es" hidden>
+          <p class="from-slide">On the slides: exponential smoothing (slides 31–38)</p>
+          <h2>Correct last month's error</h2>
+          <p>Exponential smoothing needs only last month's forecast and last month's actual orders (slide 31). Next month's forecast = last forecast + α × (last month's error), where error = actual − forecast (slide 32). The chart marks last month's error; α decides how much of it the forecast corrects. Forecasting started with a given forecast of 600 cases for January, Year 1, as the slides start with a given January forecast (slide 34).</p>
+          <div class="controls" data-controls="alpha steady fit"></div>
+          <p class="label-sm">The answers below are for the starting settings: α = 0.20, our orders. <button class="btn" type="button" data-reset>Reset</button> brings them back.</p>
+          <div class="predict">
+            <p><b>Predict, then step.</b> Go to June, Year 3. Last month (May) the forecast was 796.14 and 1,000 cases came in. What is June's forecast with α = 0.20?</p>
+            <details><summary>Show the answer</summary>
+              <p>May's error = 1,000 − 796.14 = 203.86. June's forecast = 796.14 + 0.20 × 203.86 = 836.91: the forecast moves only 20% of the way toward May's 1,000 cases. June then brings 1,009 cases, so June's error is +172.09. The calculation box under the chart shows the same steps for any month.</p>
+            </details>
+          </div>
+          <div class="predict">
+            <p><b>Predict.</b> Our orders change a lot within the year. Should α be small or large? Try 0.2 and 0.8 and compare the Year 3 MAD in the table.</p>
+            <details><summary>Show the answer</summary>
+              <p>Large. With α = 0.20 the forecast trails the seasonal swings: Year 3 MAD = 100.11 cases. With α = 0.80 it follows them: MAD = 57.94. Changing demand calls for a large α (slide 37).</p>
+            </details>
+          </div>
+          <div class="predict">
+            <p><b>Then try.</b> Switch to <b>Steady orders</b> (no trend, no season, only random changes). Which α is better now?</p>
+            <details><summary>Show the answer</summary>
+              <p>A small one. With nothing real to follow, a large α chases the random ups and downs: MAD = 32.25 cases at α = 0.80, against 28.04 at α = 0.20 and 27.79 at α = 0.10. Stable demand calls for a small α (slide 37).</p>
+            </details>
+          </div>
+          <div class="predict">
+            <p><b>Predict.</b> Back to our orders with α = 0.20. Look at the arrows on the <b>MFE and MAD</b> tab (choose Exponential smoothing there). Is the forecast too low or too high more often?</p>
+            <details><summary>Show the answer</summary>
+              <p>Too low: 8 of the 12 months of Year 3 come in above the forecast, and the mean error (MFE) is +53.49 cases. Exponential smoothing cannot pick up a trend (slide 38): each month it corrects only part of the gap while orders keep growing. A larger α shrinks the lag but does not remove it.</p>
+            </details>
+          </div>
+        </section>
+
+        <section role="tabpanel" id="panel-acc" aria-labelledby="tab-acc" hidden>
+          <p class="from-slide">On the slides: measuring accuracy, MFE and MAD (slides 47–50)</p>
+          <h2>How far off were the forecasts?</h2>
+          <p>To judge a forecasting method, compare its forecasts with the orders that actually came in. Each month's <b>error</b> = actual − forecast (slide 48). The chart shows the last 12 months (Year 3): each arrow runs from the forecast to the actual orders, <b>red and up</b> when the forecast was too low, <b>blue and down</b> when it was too high. The buttons above the chart switch to <b>Show MFE</b> (every error measured from zero; the dashed line is their average) and <b>Show MAD</b> (every error drawn above zero as its size; the bold dashed line is their average length).</p>
+          <ul class="defs">
+            <li><b>MFE</b>, mean forecast error = average of the errors. It shows the <b>bias</b>: positive means the forecasts were too low on average, negative means too high; the farther from 0, the more biased (slide 48). Up and down errors cancel.</li>
+            <li><b>MAD</b>, mean absolute deviation = average of the |errors|, the arrow lengths. It shows how far off the forecasts are, in either direction. Lower is better (slide 49, where MAD is labeled “Randomness”).</li>
+          </ul>
+          <div class="controls" data-controls="accsel"></div>
+          <p class="label-sm">The forecasts use the window, weights and α set on the other tabs. The answers below are for the starting settings: a 3-month simple moving average, weights 0.5, 0.3, 0.2, and α = 0.20. <button class="btn" type="button" data-reset>Reset</button> brings them back.</p>
+          <div class="predict">
+            <p><b>Predict.</b> With the simple moving average, count the red arrows and the blue arrows. Will the MFE be positive or negative?</p>
+            <details><summary>Show the answer</summary>
+              <p>Positive. 8 arrows are red (forecast too low) and 4 are blue (too high). The red errors add up to 654.33 cases and the blue ones to 387.32, so MFE = (654.33 − 387.32) / 12 = <b>+22.25</b> cases: on average the forecasts were too low: they are <b>biased low</b>. Orders keep growing, and an average of past months lags behind growth. Click <b>Show MFE</b>: the arrows now start at zero, and the dashed MFE line sits at +22.25, above zero.</p>
+            </details>
+          </div>
+          <div class="predict">
+            <p><b>Then compare.</b> Switch between the three methods. Which has the lowest MAD, and why?</p>
+            <details><summary>Show the answer</summary>
+              <p>The weighted moving average: MAD = <b>74.24</b> cases. Then the 3-month simple moving average (86.80) and exponential smoothing with α = 0.20 (100.11). The WMA puts half its weight on last month, so it follows the seasonal climb and drop most closely; exponential smoothing with α = 0.20 corrects only 20% of each error, so it trails the most. Lower MAD means the forecasts were closer, on average, to what came in.</p>
+            </details>
+          </div>
+          <div class="predict">
+            <p><b>Then think.</b> For the simple moving average, the MFE is much smaller than the MAD. How can that be? Click <b>Show MFE</b>, then <b>Show MAD</b>.</p>
+            <details><summary>Show the answer</summary>
+              <p>In the MFE, up and down errors cancel: May's +174.00 (orders climbing in spring) and November's −146.33 (orders dropping in fall) largely offset each other. The MAD takes absolute values, so nothing cancels: it is the average arrow length. On <b>Show MAD</b>, the four blue errors flip above zero as bars, and a bold dashed line appears at the MAD (86.80), well above the faint MFE line (+22.25). A small MFE does not mean accurate forecasts. MFE shows the bias, MAD shows the size of the errors (slide 47: bias errors vs. random errors). Of the three methods, exponential smoothing is the most biased: MFE = +53.49.</p>
+            </details>
+          </div>
+        </section>
+
+        <section role="tabpanel" id="panel-prac" aria-labelledby="tab-prac" hidden>
+          <p class="from-slide">Practice · not graded</p>
+          <h2>Forecasting practice</h2>
+          <div class="prac-q" id="prac-q"></div>
+          <form id="prac-form" class="prac-form" novalidate>
+            <div class="prac-row"><label for="pa-sma" id="pl-sma">1. 3-month simple moving average</label><input id="pa-sma" type="text" inputmode="decimal" autocomplete="off" data-pq="sma"><div class="prac-sub"><button class="btn small" type="button" data-pfocus="sma" aria-pressed="false" aria-label="Show on the chart, question 1">Show on the chart</button><span class="mark" id="pm-sma"></span></div></div>
+            <div class="prac-row"><label for="pa-wma" id="pl-wma">2. Weighted moving average</label><input id="pa-wma" type="text" inputmode="decimal" autocomplete="off" data-pq="wma"><div class="prac-sub"><button class="btn small" type="button" data-pfocus="wma" aria-pressed="false" aria-label="Show on the chart, question 2">Show on the chart</button><span class="mark" id="pm-wma"></span></div></div>
+            <div class="prac-row"><label for="pa-es" id="pl-es">3. Exponential smoothing</label><input id="pa-es" type="text" inputmode="decimal" autocomplete="off" data-pq="es"><div class="prac-sub"><button class="btn small" type="button" data-pfocus="es" aria-pressed="false" aria-label="Show on the chart, question 3">Show on the chart</button><span class="mark" id="pm-es"></span></div></div>
+            <div class="prac-row"><label for="pa-mfe" id="pl-mfe">4. MFE</label><input id="pa-mfe" type="text" inputmode="decimal" autocomplete="off" data-pq="err"><div class="prac-sub"><button class="btn small" type="button" data-pfocus="err" aria-pressed="false" aria-label="Show on the chart, questions 4–5">Show on the chart</button><span class="mark" id="pm-mfe"></span></div></div>
+            <div class="prac-row"><label for="pa-mad" id="pl-mad">5. MAD</label><input id="pa-mad" type="text" inputmode="decimal" autocomplete="off" data-pq="err"><div class="prac-sub"><button class="btn small" type="button" data-pfocus="err" aria-pressed="false" aria-label="Show on the chart, questions 4–5">Show on the chart</button><span class="mark" id="pm-mad"></span></div></div>
+            <div class="row"><button class="btn primary" type="submit">Check</button><button class="btn" type="button" id="prac-new">New problem</button></div>
+          </form>
+          <div id="prac-fb" class="prac-fb" aria-live="polite"></div>
+          <p class="label-sm" id="prac-score"></p>
+          <p class="note-star">Round to two decimals; answers within 0.01 count as correct. <b>Show on the chart</b> draws what each question uses; after <b>Check</b>, it also draws the answer and yours.</p>
+        </section>
+
+        <section role="tabpanel" id="panel-play" aria-labelledby="tab-play" hidden>
+          <p class="from-slide">Not graded · just for fun</p>
+          <h2>Playground</h2>
+          <p>Every setting in one place. Build your own orders, choose which forecasts to draw, and compare their MFE and MAD in the table under the chart.</p>
+          <div class="controls" data-controls="show trend amp sd seed n1 n2 w alpha fit calcplay"></div>
+          <div class="row"><button class="btn" type="button" data-reset>Reset</button><span class="label-sm">brings back the starting settings and random orders, for which the answers below are written.</span></div>
+          <h3>Challenges</h3>
+          <ul class="challenges">
+            <li>Turn Trend and Season off (steady orders). For exponential smoothing, is a small or a large α better now?
+              <details><summary>Show the answer</summary><p>Small. With the starting random orders, α = 0.80 gives MAD = 32.25 cases, α = 0.20 gives 28.04, and α = 0.10 gives 27.79. With nothing real to follow, reacting to a random change is a mistake (slide 37: stable demand, small α). The moving averages differ by only a case or two here, which over 12 months is luck.</p></details></li>
+            <li>Turn Season off but keep the trend. Can any SMA, WMA, or exponential smoothing setting get the MFE close to 0?
+              <details><summary>Show the answer</summary><p>Not really. All of them only look back, so with steady growth they stay too low; responsive settings (short window, large α) shrink the bias but do not remove it. The starred forecast including trend* is built for exactly this case: turn it on and its MFE drops close to 0.</p></details></li>
+            <li>Turn Random off. Do the forecasts become perfect?
+              <details><summary>Show the answer</summary><p>No. Without random changes the orders are perfectly predictable, but averages and smoothing still trail the trend and the season. A method that fits the pattern would be needed; these methods only react to past numbers.</p></details></li>
+          </ul>
+          <p class="note-star">* Forecast including trend: starred slides 39–45, not tested.</p>
+        </section>
+      </div>
+    </aside>
+  </main>
+
+  <section class="how">
+    <details>
+      <summary>How this page works</summary>
+      <ul>
+        <li>Orders for month <i>t</i> (Year 1 January = month 0) = level 600 + trend × <i>t</i> + season + random, rounded to whole cases. Season = amplitude × cos(2π(month − 5.5)/12): highest in June and July, lowest in December and January. Random = a normal random number with mean 0 and the standard deviation you choose. Season and random are rounded to two decimals. The same random numbers are used until you click <b>New random orders</b>.</li>
+        <li>Forecasts use the formulas on the slides: simple moving average (slide 16), weighted moving average (slide 25; weights listed from the most recent month back), exponential smoothing (slide 32) starting from a given forecast of 600 for January, Year 1. A forecast is drawn only when the method has enough history: an <i>n</i>-month average gives its first forecast for the (<i>n</i> + 1)th month (a 3-month average: April, Year 1).</li>
+        <li>Error = actual − forecast. MFE = average error; MAD = average absolute error (slides 48–49), over the last 12 months (Year 3). Every forecast is rounded to two decimals, at every step of exponential smoothing too, so the numbers on the page can be checked by hand.</li>
+        <li>* Forecast including trend (starred slides 39–45, not tested): F = previous FIT + α(previous A − previous FIT); T = previous T + δ(F − previous FIT); FIT = F + T, starting from F = 600 and T = 10 for January, Year 1.</li>
+        <li>Practice: each new problem draws four months of orders for one store and random weights, α, and given forecasts.</li>
+      </ul>
+    </details>
+  </section>
+</div>
+
+<script>
+(() => {
+'use strict';
+function showError(msg) {
+  const b = document.getElementById('boot-error');
+  if (b) { b.hidden = false; b.textContent = 'Something went wrong on this page: ' + (msg || 'unknown error') + '. Try reloading the page.'; }
+}
+window.addEventListener('error', (e) => {
+  // Errors with no line in this page are browser notices or other scripts (extensions), not the page.
+  if (!e.lineno) return;
+  showError(e.message);
+});
+
+/* ===== ENGINE START ===== */
+// Monthly orders for Fairfax Pickleball Works (cases of 100 balls), Year 1 January = month 0.
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTHS_LONG = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function normals(seed, n) { const r = rng(seed), out = []; while (out.length < n) { const u = Math.max(r(), 1e-12), v = r(); const m = Math.sqrt(-2 * Math.log(u)); out.push(m * Math.cos(2 * Math.PI * v), m * Math.sin(2 * Math.PI * v)); } return out.slice(0, n); }
+// Round to 2 decimals, halves away from zero (as by hand); the tiny nudge absorbs floating-point ties.
+const r2 = (x) => Math.sign(x) * Math.round(Math.abs(x) * 100 + 1e-7) / 100;
+// Outdoor-season shape: -1 in mid-winter, +1 in June-July.
+function season(m) { return Math.cos(2 * Math.PI * ((m % 12) - 5.5) / 12); }
+// Demand = level + trend + season + random (season and random rounded to 2 decimals), rounded to whole cases.
+function makeDemand(p) {
+  const z = normals(p.seed, p.months);
+  const rows = [];
+  for (let t = 0; t < p.months; t++) {
+    const trend = p.trendOn ? p.trend * t : 0;
+    const seas = p.seasonOn ? r2(p.amp * season(t)) : 0;
+    const noise = p.noiseOn ? r2(p.sd * z[t]) : 0;
+    const exact = r2(p.level + trend + seas + noise);
+    rows.push({ t, level: p.level, trend, seas, noise, exact, a: Math.max(0, Math.round(exact + 1e-7)) });
+  }
+  return rows;
+}
+// Forecasts: f[t] = forecast for month t, made at the end of month t-1 (null when the method has too little history).
+function sma(a, n) { const f = []; for (let t = 0; t <= a.length; t++) { if (t < n) { f.push(null); continue; } let s = 0; for (let i = 1; i <= n; i++) s += a[t - i]; f.push(s / n); } return f; }
+// w[0] = weight on the most recent month (t-1), w[1] on t-2, ...
+function wma(a, w) { const n = w.length, f = []; for (let t = 0; t <= a.length; t++) { if (t < n) { f.push(null); continue; } let s = 0; for (let i = 1; i <= n; i++) s += w[i - 1] * a[t - i]; f.push(s); } return f; }
+// Slide 32: F(t) = F(t-1) + alpha * (A(t-1) - F(t-1)); f0 = the given forecast for month 0. Each forecast is rounded to 2 decimals, as a student would.
+function es(a, alpha, f0) { const f = [f0]; for (let t = 1; t <= a.length; t++) f.push(r2(f[t - 1] + alpha * (a[t - 1] - f[t - 1]))); return f; }
+// Starred slides 39-44: F(t) = FIT(t-1) + alpha (A(t-1) - FIT(t-1)); T(t) = T(t-1) + delta (F(t) - FIT(t-1)); FIT(t) = F(t) + T(t).
+function fit(a, alpha, delta, f0, t0) { const F = [f0], T = [t0], FIT = [r2(f0 + t0)]; for (let t = 1; t <= a.length; t++) { const Ft = r2(FIT[t - 1] + alpha * (a[t - 1] - FIT[t - 1])); const Tt = r2(T[t - 1] + delta * (Ft - FIT[t - 1])); F.push(Ft); T.push(Tt); FIT.push(r2(Ft + Tt)); } return { F, T, FIT }; }
+// Error = actual - forecast (slides 48-49), with each forecast rounded to 2 decimals as shown on the page. Over months [from, to).
+function accuracy(a, f, from, to) { let n = 0, s = 0, sa = 0; const rows = []; for (let t = from; t < to; t++) { if (f[t] == null) continue; const F = r2(f[t]); const e = r2(a[t] - F); n++; s += e; sa += Math.abs(e); rows.push({ t, a: a[t], f: F, e, ae: Math.abs(e) }); } return { n, sum: r2(s), sumAbs: r2(sa), mfe: n ? s / n : null, mad: n ? sa / n : null, rows }; }
+// Starred slide 51: tracking signal = running sum of forecast errors / MAD so far.
+/* ===== ENGINE END ===== */
+
+const $ = (id) => document.getElementById(id);
+const N = 36, EVAL_FROM = 24; // the MFE and MAD tab measures the last 12 months (Year 3)
+const ACC_KEYS = ['sma1', 'wma', 'es'];
+const DEFAULTS = { seed: 26, level: 600, trend: 10, amp: 150, sd: 30, trendOn: true, seasonOn: true, noiseOn: true,
+  n1: 3, n2: 6, w: [0.5, 0.3, 0.2], alpha: 0.2, f0: 600, steady: false, fitOn: false, delta: 0.3, t0: 10,
+  layers: { trend: false, curve: false, rand: false }, calcMa: 'sma1', calcPlay: 'es', accSel: 'sma1', accView: 'fc',
+  show: { sma1: true, sma2: false, wma: true, es: true } };
+const TAB_START = { comp: 29, ma: 29, es: 29, acc: 28, prac: 0, play: 36 };
+let S = clone(DEFAULTS);
+S.tab = 'comp'; S.cursor = TAB_START.comp;
+function clone(o) { return JSON.parse(JSON.stringify(o)); }
+
+const fmt0 = (x) => Math.round(x).toLocaleString('en-US');
+const fmt2 = (x) => r2(x).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); // tie-safe, as by hand
+const fmtS = (x) => (x > 0 ? '+' : x < 0 ? '−' : '') + fmt2(Math.abs(x));
+const fmtN = (x) => (x < 0 ? '−' : '') + fmt2(Math.abs(x));
+const term = (x) => (x < 0 ? ' − ' : ' + ') + fmt2(Math.abs(x));
+const art = (n) => (n === 8 || n === 11 ? 'An' : 'A');
+const fmtI = (x) => (x < 0 ? '−' : '') + Math.abs(x);
+const lc = (s) => (/^[A-Z][a-z]/.test(s) ? s.charAt(0).toLowerCase() + s.slice(1) : s); // a method name mid-sentence
+const fmtE = (x) => (x > 0 ? '+' : '') + fmtI(x);
+const fmtW = (x) => (isFinite(x) ? (x < 0 ? '−' : '') + String(+Math.abs(x).toFixed(4)) : '?');
+const monthName = (t) => t >= N ? `${MONTHS_LONG[t % 12]}, Year ${Math.floor(t / 12) + 1} (next month)` : `${MONTHS_LONG[t % 12]}, Year ${Math.floor(t / 12) + 1}`;
+const monthShort = (t) => `${MONTHS[t % 12]} Y${Math.floor(t / 12) + 1}`;
+
+/* ---------- model state ---------- */
+let D = [], A = [];
+function demandParams() {
+  const p = { seed: S.seed, months: N, level: S.level, trend: S.trend, amp: S.amp, sd: S.sd, trendOn: S.trendOn, seasonOn: S.seasonOn, noiseOn: S.noiseOn };
+  if (S.tab === 'es' && S.steady) { p.trendOn = false; p.seasonOn = false; p.noiseOn = true; }
+  return p;
+}
+function wSum() { return Math.round(S.w.reduce((s, x) => s + x, 0) * 10000) / 10000; }
+function wProblem() {
+  if (!S.w.every((x) => isFinite(x))) return 'Enter a number for each weight.';
+  if (S.w.some((x) => x < 0)) return 'Weights cannot be negative (a weight can be zero, slide 30).';
+  if (Math.abs(wSum() - 1) >= 0.00005) return `The weights must add up to 1 (slide 25); now they add up to ${fmtW(wSum())}.`;
+  return '';
+}
+function wOK() { return wProblem() === ''; }
+function methodList() {
+  const out = [
+    { key: 'sma1', name: `${S.n1}-month moving average`, short: `${S.n1}-month SMA`, color: 'm-sma1', dash: [], f: sma(A, S.n1) },
+    { key: 'sma2', name: `${S.n2}-month moving average`, short: `${S.n2}-month SMA`, color: 'm-sma2', dash: [7, 4], f: sma(A, S.n2) },
+    { key: 'wma', name: `Weighted moving average (${S.w.map(fmtW).join(', ')})`, short: 'WMA', color: 'm-wma', dash: [2, 3], f: wOK() ? wma(A, S.w) : null },
+    { key: 'es', name: `Exponential smoothing (α = ${S.alpha.toFixed(2)})`, short: `ES, α = ${S.alpha.toFixed(2)}`, color: 'm-es', dash: [], width: 2.6, f: es(A, S.alpha, S.f0) },
+  ];
+  if (S.fitOn) { const g = fit(A, S.alpha, S.delta, S.f0, S.t0); out.push({ key: 'fit', name: `Forecast including trend* (α = ${S.alpha.toFixed(2)}, δ = ${S.delta.toFixed(2)})`, short: 'FIT*', color: 'm-fit', dash: [9, 3, 2, 3], f: g.FIT, parts: g }); }
+  return out;
+}
+let M = [];
+function recompute() { D = makeDemand(demandParams()); A = D.map((r) => r.a); M = methodList(); }
+function byKey(k) { return M.find((m) => m.key === k); }
+function chartMethods() {
+  switch (S.tab) {
+    case 'comp': return [];
+    case 'ma': return M.filter((m) => ['sma1', 'sma2', 'wma'].includes(m.key));
+    case 'es': return M.filter((m) => m.key === 'es' || m.key === 'fit');
+    case 'acc': { const m = byKey(S.accSel) || byKey('sma1'); return [m]; }
+    case 'play': return M.filter((m) => (S.show[m.key] !== false) && (m.key !== 'fit' || S.fitOn));
+    default: return [];
+  }
+}
+function tableMethods() {
+  if (S.tab === 'acc') return M.filter((m) => ACC_KEYS.includes(m.key));
+  if (S.tab === 'play') return M.filter((m) => S.show[m.key] !== false || m.key === 'fit');
+  return chartMethods();
+}
+function calcMethodKey() {
+  if (S.tab === 'ma') return S.calcMa;
+  if (S.tab === 'es') return 'es';
+  if (S.tab === 'acc') return S.accSel;
+  if (S.tab === 'play') return S.calcPlay;
+  return null;
+}
+
+/* ---------- colors ---------- */
+let C = {};
+function readTheme() {
+  const cs = getComputedStyle(document.documentElement);
+  const g = (n) => cs.getPropertyValue('--' + n).trim();
+  C = {};
+  ['bg','surface','surface-2','ink','ink-2','muted','rule','accent','accent-soft','gold','gold-soft','cursor','danger','bar','bar-edge','bar-next','m-sma1','m-sma2','m-wma','m-es','m-fit','m-sma1-text','m-es-text','layer-trend','layer-curve','layer-rand'].forEach((n) => { C[n] = g(n); });
+}
+
+/* ---------- chart ---------- */
+const cv = $('chart');
+let geo = null; // last layout: slot geometry for hit-testing
+let practiceView = null; // when on the Practice tab: { labels, a, focus } (focus = which question's calculation the chart shows)
+function sizeCanvas() {
+  const w = Math.max(280, Math.round(cv.parentElement.clientWidth));
+  const h = w < 560 ? 270 : Math.round(Math.min(380, Math.max(300, w * 0.42)));
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+  cv.style.height = h + 'px';
+  return { w, h, dpr };
+}
+function niceRange(lo, hi) {
+  const step = hi - lo > 900 ? 200 : 100;
+  let a = Math.floor((lo - 30) / step) * step, b = Math.ceil((hi + 30) / step) * step;
+  if (a < 0 || lo <= 0) a = 0;
+  return { lo: a, hi: b, step };
+}
+function draw() {
+  const { w, h, dpr } = sizeCanvas();
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  const narrow = w < 560;
+  if (S.tab === 'prac' && practiceView) { drawPractice(ctx, w, h, narrow); return; }
+  if (S.tab === 'acc') { drawAcc(ctx, w, h, narrow); return; }
+  const prac = false; // the main chart (the practice chart is drawn by drawPractice)
+  const labels = prac ? practiceView.labels : null;
+  const a = prac ? practiceView.a : A;
+  const nSlots = a.length + 1;
+  const meths = prac ? [] : chartMethods();
+  // y range over the bars, the visible forecasts and the layers
+  let lo = Infinity, hi = -Infinity;
+  a.forEach((v) => { lo = Math.min(lo, v); hi = Math.max(hi, v); });
+  meths.forEach((m) => { if (!m.f) return; m.f.forEach((v) => { if (v != null) { lo = Math.min(lo, v); hi = Math.max(hi, v); } }); });
+  if (!prac && S.tab === 'comp') D.forEach((r) => { lo = Math.min(lo, r.level + r.trend + r.seas); hi = Math.max(hi, r.level + r.trend + r.seas); });
+  const yr = niceRange(0, hi); // bars always start at zero
+  const L = narrow ? 40 : 50, R = 8, T = 14, B = 40;
+  const pw = w - L - R, ph = h - T - B;
+  const sw = pw / nSlots;
+  const X = (t) => L + sw * (t + 0.5);
+  const Y = (v) => T + ph * (1 - (v - yr.lo) / (yr.hi - yr.lo));
+  geo = { L, R, T, B, sw, nSlots, X, Y, w, h, t0: 0 };
+  // background band: cursor window
+  const cur = prac ? null : S.cursor;
+  if (cur != null && S.tab !== 'comp') {
+    const mk = calcMethodKey();
+    const n = mk === 'sma1' ? S.n1 : mk === 'sma2' ? S.n2 : mk === 'wma' ? S.w.length : 0;
+    if (n && cur - n >= 0) {
+      ctx.fillStyle = C['accent-soft']; ctx.fillRect(L + sw * (cur - n), T, sw * n, ph);
+      ctx.strokeStyle = C.accent; ctx.lineWidth = 1.5; ctx.beginPath();
+      const yb = T + ph - 2; ctx.moveTo(L + sw * (cur - n) + 2, yb - 6); ctx.lineTo(L + sw * (cur - n) + 2, yb); ctx.lineTo(L + sw * cur - 2, yb); ctx.lineTo(L + sw * cur - 2, yb - 6); ctx.stroke();
+    }
+  }
+  if (cur != null) { ctx.fillStyle = C['gold-soft']; ctx.fillRect(L + sw * cur, T, sw, ph); ctx.strokeStyle = C.cursor; ctx.lineWidth = 1.5; ctx.strokeRect(L + sw * cur + 0.75, T + 0.75, sw - 1.5, ph - 1.5); }
+  // gridlines and y labels
+  const font = getComputedStyle(document.body).fontFamily;
+  ctx.font = `${narrow ? 10 : 11}px ${font}`; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (let v = yr.lo; v <= yr.hi + 0.1; v += yr.step) {
+    const y = Y(v); ctx.strokeStyle = C.rule; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(w - R, y); ctx.stroke();
+    ctx.fillStyle = C.muted; ctx.fillText(fmt0(v), L - 6, y);
+  }
+  // bars
+  const bw = Math.max(2, sw * 0.64);
+  for (let t = 0; t < a.length; t++) {
+    const y = Y(a[t]), y0 = Y(yr.lo);
+    ctx.fillStyle = C.bar; ctx.fillRect(X(t) - bw / 2, y, bw, y0 - y);
+    ctx.strokeStyle = C['bar-edge']; ctx.lineWidth = 1; ctx.strokeRect(X(t) - bw / 2 + 0.5, y + 0.5, bw - 1, y0 - y - 1);
+  }
+  // next-month slot: unknown
+  { const t = a.length; ctx.setLineDash([4, 3]); ctx.strokeStyle = C.muted; ctx.lineWidth = 1; ctx.strokeRect(X(t) - bw / 2 + 0.5, T + 18, bw - 1, ph - 18); ctx.setLineDash([]);
+    ctx.fillStyle = C.muted; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = `700 ${narrow ? 11 : 13}px ${font}`; ctx.fillText('?', X(t), T + 12 + ph / 2); }
+  // components layers
+  if (!prac && S.tab === 'comp') {
+    if (S.layers.rand) { ctx.strokeStyle = C['layer-rand']; ctx.lineWidth = 2; D.forEach((r) => { const c = r.level + r.trend + r.seas; ctx.beginPath(); ctx.moveTo(X(r.t), Y(c)); ctx.lineTo(X(r.t), Y(r.a)); ctx.stroke(); }); }
+    if (S.layers.trend) { ctx.strokeStyle = C['layer-trend']; ctx.lineWidth = 2; ctx.setLineDash([6, 4]); ctx.beginPath(); D.forEach((r, i) => { const v = r.level + r.trend; i ? ctx.lineTo(X(r.t), Y(v)) : ctx.moveTo(X(r.t), Y(v)); }); ctx.stroke(); ctx.setLineDash([]); }
+    if (S.layers.curve) { ctx.strokeStyle = C['layer-curve']; ctx.lineWidth = 2.5; ctx.beginPath(); D.forEach((r, i) => { const v = r.level + r.trend + r.seas; i ? ctx.lineTo(X(r.t), Y(v)) : ctx.moveTo(X(r.t), Y(v)); }); ctx.stroke(); }
+  }
+  // forecast lines
+  meths.forEach((m) => {
+    if (!m.f) return;
+    ctx.strokeStyle = C[m.color]; ctx.lineWidth = m.width || 2; ctx.setLineDash(m.dash); ctx.beginPath();
+    let started = false;
+    m.f.forEach((v, t) => { if (v == null) return; const x = X(t), y = Y(v); if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y); });
+    ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = C[m.color];
+    m.f.forEach((v, t) => { if (v == null) return; const r = t === cur ? 5 : (narrow ? 1.6 : 2.4); ctx.beginPath(); ctx.arc(X(t), Y(v), r, 0, Math.PI * 2); ctx.fill(); });
+  });
+  // exponential smoothing: last month's error and the share corrected
+  if (!prac && S.tab === 'es' && cur != null && cur >= 1) {
+    const m = byKey('es'); const prev = m.f[cur - 1], act = a[cur - 1], nxt = m.f[cur];
+    const x = X(cur - 1) + bw / 2 + 4;
+    ctx.strokeStyle = C.danger; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, Y(prev)); ctx.lineTo(x, Y(act)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - 4, Y(act)); ctx.lineTo(x + 4, Y(act)); ctx.moveTo(x - 4, Y(prev)); ctx.lineTo(x + 4, Y(prev)); ctx.stroke();
+    ctx.strokeStyle = C['m-es']; ctx.setLineDash([3, 3]); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(X(cur - 1), Y(prev)); ctx.lineTo(X(cur), Y(prev)); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = C['m-es']; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(X(cur), Y(prev)); ctx.lineTo(X(cur), Y(nxt)); ctx.stroke();
+  }
+  // x labels: months and years
+  ctx.fillStyle = C.muted; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.font = `${narrow ? 9.5 : 11}px ${font}`;
+  for (let t = 0; t < nSlots; t++) {
+    let lab;
+    if (prac) lab = t < a.length ? labels[t] : labels[a.length];
+    else { const m = t % 12; if (narrow && m % 3 !== 0 && t !== N) continue; lab = narrow ? MONTHS[m] : MONTHS[m].charAt(0); if (t === N) lab = narrow ? 'Next' : 'Next'; }
+    ctx.fillStyle = t === cur ? C.ink : C.muted; ctx.fillText(lab, X(t), T + ph + 5);
+  }
+  if (!prac) {
+    ctx.font = `700 ${narrow ? 10 : 11}px ${font}`; ctx.fillStyle = C['ink-2'];
+    for (let y = 0; y < 3; y++) ctx.fillText(`Year ${y + 1}`, L + sw * (12 * y + 6), T + ph + 21);
+    ctx.strokeStyle = C.rule; ctx.lineWidth = 1;
+    for (let y = 1; y <= 3; y++) { const x = L + sw * 12 * y; ctx.beginPath(); ctx.moveTo(x, T); ctx.lineTo(x, T + ph + 34); ctx.stroke(); }
+  }
+  ctx.strokeStyle = C.ink; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(L, Y(yr.lo)); ctx.lineTo(w - R, Y(yr.lo)); ctx.stroke();
+}
+
+/* ---------- MFE and MAD tab: the last 12 months, each error an arrow from the forecast to the actual orders ---------- */
+// Same marks as the practice chart: line + dots = actual orders, diamond = forecast, red arrow up = forecast too low, blue down = too high.
+function drawAcc(ctx, w, h, narrow) {
+  const m = byKey(S.accSel), font = getComputedStyle(document.body).fontFamily, n = 12;
+  const L = narrow ? 40 : 50, R = 8, T = 16, B = 40, pw = w - L - R, ph = h - T - B, sw = pw / n;
+  const X = (i) => L + sw * (i + 0.5);
+  geo = { L, R, T, B, sw, nSlots: n, X: (t) => X(t - EVAL_FROM), w, h, t0: EVAL_FROM };
+  const rows = m && m.f ? accuracy(A, m.f, EVAL_FROM, N).rows : [];
+  if (rows.length < n) {
+    ctx.fillStyle = C.ink; ctx.font = `700 ${narrow ? 12 : 14}px ${font}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(m && !m.f ? 'Check the weights (Moving averages tab or Playground).' : 'Not enough history for this method.', w / 2, h / 2); return;
+  }
+  if (S.accView !== 'fc') { drawAccErrors(ctx, w, h, narrow, rows, { L, R, T, B, pw, ph, sw, X, n, font }); return; }
+  let lo = Math.min(...rows.map((r) => Math.min(r.a, r.f))), hi = Math.max(...rows.map((r) => Math.max(r.a, r.f)));
+  const pad = Math.max(10, (hi - lo) * 0.1), step = niceStep(hi - lo + 2 * pad);
+  lo = Math.floor((lo - pad) / step) * step; hi = Math.ceil((hi + pad) / step) * step;
+  const Y = (v) => T + ph * (1 - (v - lo) / (hi - lo));
+  const fs = narrow ? 10.5 : 11.5;
+  const txt = (s, x, y, color, align, weight) => { ctx.textAlign = align; ctx.font = `${weight} ${fs}px ${font}`; ctx.lineJoin = 'round'; ctx.lineWidth = 4; ctx.strokeStyle = C.surface; ctx.strokeText(s, x, y); ctx.fillStyle = color; ctx.fillText(s, x, y); };
+  const errCol = (e) => (e > 0 ? C.danger : e < 0 ? C['m-sma2'] : C.ink);
+  // selected month
+  const ci = S.cursor - EVAL_FROM;
+  if (ci >= 0 && ci < n) { ctx.fillStyle = C['gold-soft']; ctx.fillRect(L + sw * ci, T, sw, ph); ctx.strokeStyle = C.cursor; ctx.lineWidth = 1.5; ctx.strokeRect(L + sw * ci + 0.75, T + 0.75, sw - 1.5, ph - 1.5); }
+  // grid
+  ctx.font = `${narrow ? 10 : 11}px ${font}`; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (let v = lo; v <= hi + 1e-9; v += step) { const y = Y(v); ctx.strokeStyle = C.rule; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(w - R, y); ctx.stroke(); ctx.fillStyle = C.muted; ctx.fillText(fmt0(v), L - 6, y); }
+  ctx.textBaseline = 'alphabetic';
+  // forecasts: thin dashed line, diamonds later
+  ctx.strokeStyle = C[m.color]; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]); ctx.beginPath(); rows.forEach((r, i) => (i ? ctx.lineTo(X(i), Y(r.f)) : ctx.moveTo(X(i), Y(r.f)))); ctx.stroke(); ctx.setLineDash([]);
+  // actual orders: line + dots
+  ctx.strokeStyle = C['ink-2']; ctx.lineWidth = 2; ctx.beginPath(); rows.forEach((r, i) => (i ? ctx.lineTo(X(i), Y(r.a)) : ctx.moveTo(X(i), Y(r.a)))); ctx.stroke();
+  // error arrows, just right of each month's marks
+  const off = Math.max(5, Math.min(11, sw * 0.2));
+  rows.forEach((r, i) => {
+    const x = X(i) + off, y1 = Y(r.f), y2 = Y(r.a), col = errCol(r.e), d = y2 > y1 ? 1 : -1;
+    if (Math.abs(y2 - y1) < 1) return;
+    ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = narrow ? 2 : 2.5; ctx.beginPath(); ctx.moveTo(x, y1); ctx.lineTo(x, y2); ctx.stroke();
+    const hl = Math.min(8, Math.abs(y2 - y1)), hw = (narrow ? 3.5 : 5) * hl / 8; // short errors get a smaller head, so they still read as arrows
+    if (hl >= 3) { ctx.beginPath(); ctx.moveTo(x, y2); ctx.lineTo(x - hw, y2 - hl * d); ctx.lineTo(x + hw, y2 - hl * d); ctx.closePath(); ctx.fill(); }
+  });
+  const ds = narrow ? 4.5 : 6, rd = narrow ? 3.5 : 4.5;
+  rows.forEach((r, i) => {
+    const x = X(i), y = Y(r.f); ctx.fillStyle = C[m.color]; ctx.beginPath(); ctx.moveTo(x, y - ds); ctx.lineTo(x + ds, y); ctx.lineTo(x, y + ds); ctx.lineTo(x - ds, y); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(x, Y(r.a), rd, 0, Math.PI * 2); ctx.fill();
+  });
+  // the selected month's error, centered in its own band above its marks (at the top of the band where the band is narrower than the label)
+  if (ci >= 0 && ci < n) { const r = rows[ci]; accTag(ctx, fmtS(r.e), X(ci), sw, Math.min(Y(r.f), Y(r.a)) - 9, T + fs + 2, errCol(r.e), fs, font); }
+  // month labels
+  ctx.textBaseline = 'top'; ctx.font = `${narrow ? 9.5 : 11}px ${font}`; ctx.textAlign = 'center';
+  const short = ctx.measureText('May').width + 5 > sw; // one letter per month where three do not fit (phones)
+  rows.forEach((r, i) => { ctx.fillStyle = i === ci ? C.ink : C.muted; ctx.fillText(short ? MONTHS[r.t % 12].charAt(0) : MONTHS[r.t % 12], X(i), T + ph + 5); });
+  ctx.font = `700 ${narrow ? 10 : 11}px ${font}`; ctx.fillStyle = C['ink-2']; ctx.fillText('Year 3 (the last 12 months)', L + pw / 2, T + ph + 21);
+  ctx.textBaseline = 'alphabetic';
+}
+
+// MFE view: each error as an arrow from zero, dashed line at their average. MAD view: the blue (negative) errors flip above
+// zero (animated by accFlip, 0 → 1), arrows become plain bars because only the length counts, dashed line at the average length.
+let accFlip = 1, accAnimId = null;
+// A value label on a card-colored tag (so no line runs through it), centered at x; it moves to yAlt when wider than the band.
+function accTag(ctx, s, x, band, y, yAlt, color, fs, font) {
+  ctx.font = `800 ${fs}px ${font}`; const wd = ctx.measureText(s).width, yy = wd + 4 <= band ? y : yAlt;
+  ctx.fillStyle = C.surface; ctx.globalAlpha = 0.92; ctx.fillRect(x - wd / 2 - 3, yy - fs + 1, wd + 6, fs + 4); ctx.globalAlpha = 1;
+  ctx.textAlign = 'center'; ctx.fillStyle = color; ctx.fillText(s, x, yy);
+}
+function drawAccErrors(ctx, w, h, narrow, rows, g) {
+  const { L, T, ph, n, font } = g, mad = S.accView === 'mad', p = mad ? accFlip : 0;
+  const q = accuracy(A, byKey(S.accSel).f, EVAL_FROM, N), mfe = r2(q.mfe), madv = r2(q.mad);
+  const fs = narrow ? 10.5 : 11.5;
+  // a right margin holds the MFE / MAD labels, so they never cover a bar; wide enough for the longest value
+  ctx.font = `800 ${fs}px ${font}`;
+  const R = Math.max(narrow ? 50 : 84, Math.max(...[fmtS(mfe), fmt2(madv), 'MAD'].map((x) => ctx.measureText(x).width)) + 12);
+  const pw = w - L - R, sw = pw / n, X = (i) => L + sw * (i + 0.5);
+  geo = { L, R, T, B: g.B, sw, nSlots: n, X: (t) => X(t - EVAL_FROM), w, h, t0: EVAL_FROM };
+  const es = rows.map((r) => r.e);
+  let lo = Math.min(0, ...es), hi = Math.max(0, ...es.map(Math.abs));
+  const pad = Math.max(10, (hi - lo) * 0.1), step = niceStep(hi - lo + 2 * pad);
+  lo = Math.floor((lo - pad) / step) * step; hi = Math.ceil((hi + pad) / step) * step;
+  const Y = (v) => T + ph * (1 - (v - lo) / (hi - lo));
+  const txt = (s, x, y, color, align, weight) => { ctx.textAlign = align; ctx.font = `${weight} ${fs}px ${font}`; ctx.lineJoin = 'round'; ctx.lineWidth = 4; ctx.strokeStyle = C.surface; ctx.strokeText(s, x, y); ctx.fillStyle = color; ctx.fillText(s, x, y); };
+  const errCol = (e) => (e > 0 ? C.danger : e < 0 ? C['m-sma2'] : C.ink);
+  const ci = S.cursor - EVAL_FROM;
+  if (ci >= 0 && ci < n) { ctx.fillStyle = C['gold-soft']; ctx.fillRect(L + sw * ci, T, sw, ph); ctx.strokeStyle = C.cursor; ctx.lineWidth = 1.5; ctx.strokeRect(L + sw * ci + 0.75, T + 0.75, sw - 1.5, ph - 1.5); }
+  // grid: signed error axis, zero line in ink
+  ctx.font = `${narrow ? 10 : 11}px ${font}`; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (let v = lo; v <= hi + 1e-9; v += step) { const y = Y(v); ctx.strokeStyle = v === 0 ? C.ink : C.rule; ctx.lineWidth = v === 0 ? 1.5 : 1; ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(w - R, y); ctx.stroke(); ctx.fillStyle = C.muted; ctx.fillText(v > 0 ? '+' + fmt0(v) : v < 0 ? '−' + fmt0(-v) : '0', L - 6, y); }
+  ctx.textBaseline = 'alphabetic';
+  const bw = Math.max(5, Math.min(18, sw * 0.34)), y0 = Y(0);
+  rows.forEach((r, i) => {
+    const x = X(i), col = errCol(r.e);
+    const v = r.e < 0 ? r.e + (Math.abs(r.e) - r.e) * p : r.e; // a negative error moves from e to |e| as p goes 0 → 1
+    if (mad) {
+      if (r.e < 0) { ctx.setLineDash([3, 3]); ctx.strokeStyle = col; ctx.globalAlpha = 0.55; ctx.lineWidth = 1; ctx.strokeRect(x - bw / 2 + 0.5, y0, bw - 1, Y(r.e) - y0); ctx.setLineDash([]); ctx.globalAlpha = 1; } // where it came from
+      ctx.fillStyle = col; ctx.globalAlpha = 0.85; const ya = Y(v); ctx.fillRect(x - bw / 2, Math.min(ya, y0), bw, Math.abs(ya - y0)); ctx.globalAlpha = 1;
+    } else {
+      const y2 = Y(v), d = y2 > y0 ? 1 : -1, hl = Math.min(9, Math.abs(y2 - y0)), hw = (narrow ? 4 : 6) * hl / 9;
+      ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = narrow ? 2.5 : 3.5; ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y2 - hl * d * 0.5); ctx.stroke();
+      if (hl >= 3) { ctx.beginPath(); ctx.moveTo(x, y2); ctx.lineTo(x - hw, y2 - hl * d); ctx.lineTo(x + hw, y2 - hl * d); ctx.closePath(); ctx.fill(); }
+    }
+  });
+  // average lines: MFE (and, on the MAD view, a faint MFE line for comparison)
+  // name on one line, value below, centered on the line (yl), in the right margin
+  const line = (v, color, width, dash, name, val, yl) => {
+    const y = Y(v); ctx.strokeStyle = color; ctx.lineWidth = width; ctx.setLineDash(dash); ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(w - R + 2, y); ctx.stroke(); ctx.setLineDash([]);
+    txt(name, w - R + 6, yl - 2, color, 'left', 800); txt(val, w - R + 6, yl + fs, color, 'left', 800);
+  };
+  const blk = 2 * fs + 6;
+  if (mad) {
+    const yMad = Y(madv), yMfe = p >= 1 ? Math.max(Y(mfe), yMad + blk) : Y(mfe); // MFE ≤ MAD always, so its label goes below
+    line(mfe, C.muted, 1.5, [3, 4], 'MFE', fmtS(mfe), yMfe);
+    if (p >= 1) line(madv, C.ink, 2.5, [8, 5], 'MAD', fmt2(madv), yMad);
+  } else line(mfe, C.ink, 2.5, [8, 5], 'MFE', fmtS(mfe), Y(mfe));
+  // the selected month's value
+  if (ci >= 0 && ci < n) {
+    const r = rows[ci], v = mad ? Math.abs(r.e) : r.e, up = v >= 0; // above the tip (below it for a negative error), inside the band
+    accTag(ctx, mad ? fmt2(Math.abs(r.e)) : fmtS(r.e), X(ci), sw, up ? Y(v) - 7 : Y(v) + fs + 5, up ? T + fs + 2 : T + ph - 5, errCol(r.e), fs, font);
+  }
+  ctx.textBaseline = 'top'; ctx.font = `${narrow ? 9.5 : 11}px ${font}`; ctx.textAlign = 'center';
+  const short = ctx.measureText('May').width + 5 > sw; // one letter per month where three do not fit (phones)
+  rows.forEach((r, i) => { ctx.fillStyle = i === ci ? C.ink : C.muted; ctx.fillText(short ? MONTHS[r.t % 12].charAt(0) : MONTHS[r.t % 12], X(i), T + ph + 5); });
+  ctx.font = `700 ${narrow ? 10 : 11}px ${font}`; ctx.fillStyle = C['ink-2']; ctx.fillText('Year 3 (the last 12 months)', L + pw / 2, T + ph + 21);
+  ctx.textBaseline = 'alphabetic';
+}
+function setAccView(v) {
+  stop(); const was = S.accView; S.accView = v;
+  if (accAnimId) { cancelAnimationFrame(accAnimId); accAnimId = null; }
+  if (v === 'mad' && was !== 'mad' && !reduceMotion) {
+    accFlip = 0; const t0 = performance.now();
+    const frame = () => { accAnimId = null; try { accFlip = Math.max(0, Math.min(1, (performance.now() - t0) / 700)); if (accFlip < 1) accAnimId = requestAnimationFrame(frame); draw(); } catch (err) { accFlip = 1; } };
+    accAnimId = requestAnimationFrame(frame);
+  } else accFlip = 1;
+  update();
+}
+
+/* ---------- practice chart: each question's calculation drawn on the store's data ---------- */
+// A line chart zoomed to the data (not bars from zero), so errors of a few cases stay visible.
+function niceStep(span) { const raw = Math.max(span, 1) / 5; const p = Math.pow(10, Math.floor(Math.log10(raw))); const m = raw / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p; }
+function pracYou(q) { const v = prac && prac.user ? prac.user[q] : null; return v != null && isFinite(v) ? v : null; }
+function drawPractice(ctx, w, h, narrow) {
+  const P = prac, a = P.a, f = practiceView.focus, done = P.checked, n = a.length;
+  const font = getComputedStyle(document.body).fontFamily;
+  const vals = a.slice();
+  if (f === 'sma' && done) vals.push(P.ans.sma);
+  if (f === 'wma' && done) vals.push(P.ans.wma, P.ans.sma);
+  if (f === 'es') { vals.push(P.fLast); if (done) vals.push(P.ans.es); }
+  if (f === 'err') vals.push(P.f3, P.f4);
+  const you = done && ['sma', 'wma', 'es'].includes(f) ? pracYou(f) : null;
+  const span0 = Math.max(...vals) - Math.min(...vals) + 20;
+  const youIn = you != null && you > Math.min(...vals) - span0 && you < Math.max(...vals) + span0;
+  if (youIn) vals.push(you);
+  let lo = Math.min(...vals), hi = Math.max(...vals); const pad = Math.max(6, (hi - lo) * 0.22);
+  const step = niceStep(hi - lo + 2 * pad); lo = Math.floor((lo - pad) / step) * step; hi = Math.ceil((hi + pad) / step) * step;
+  const L = narrow ? 40 : 50, R = 8, T = 30, B = 30, pw = w - L - R, ph = h - T - B, sw = pw / (n + 1);
+  const X = (t) => L + sw * (t + 0.5), Y = (v) => T + ph * (1 - (v - lo) / (hi - lo));
+  geo = { L, R, T, B, sw, nSlots: n + 1, X, Y, w, h, t0: 0 };
+  // every label gets a halo in the card color, so it stays readable over lines and shading
+  const txt = (s, x, y, color, align, weight) => { ctx.textAlign = align || 'center'; ctx.font = `${weight || 600} ${narrow ? 11 : 12.5}px ${font}`; ctx.lineJoin = 'round'; ctx.lineWidth = 4; ctx.strokeStyle = C.surface; ctx.strokeText(s, x, y); ctx.fillStyle = color; ctx.fillText(s, x, y); };
+  const shade = (t, alpha) => { ctx.globalAlpha = alpha; ctx.fillStyle = C.accent; ctx.fillRect(L + sw * t + 3, T, sw - 6, ph); ctx.globalAlpha = 1; };
+  const dot = (x, y, color, r) => { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y, r || 6, 0, Math.PI * 2); ctx.fill(); };
+  const diamond = (x, y, color) => { ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(x, y - 7); ctx.lineTo(x + 7, y); ctx.lineTo(x, y + 7); ctx.lineTo(x - 7, y); ctx.closePath(); ctx.fill(); }; // a given forecast
+  const arrow = (x, y1, y2, color) => { ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(x, y1); ctx.lineTo(x, y2); ctx.stroke(); const d = y2 > y1 ? 1 : -1; if (Math.abs(y2 - y1) > 8) { ctx.beginPath(); ctx.moveTo(x, y2); ctx.lineTo(x - 5, y2 - 8 * d); ctx.lineTo(x + 5, y2 - 8 * d); ctx.closePath(); ctx.fill(); } };
+  const errCol = (e) => (e >= 0 ? C.danger : C['m-sma2']); // one rule everywhere: red up = forecast too low, blue down = too high
+  ctx.textBaseline = 'alphabetic';
+  // which months the question uses
+  if (f === 'sma') { [1, 2, 3].forEach((t) => shade(t, 0.13)); txt('last 3 months, equal weights', L + sw * 2.5, T - 12, C.accent, 'center', 700); }
+  if (f === 'wma') { [[3, P.w[0]], [2, P.w[1]], [1, P.w[2]]].forEach(([t, wt]) => { shade(t, 0.05 + 0.42 * wt); txt('× ' + wt, X(t), T - 12, C.accent, 'center', 700); }); }
+  if (f === 'es') { shade(3, 0.13); txt('last month', X(3), T - 12, C.accent, 'center', 700); }
+  if (f === 'err') { [2, 3].forEach((t) => shade(t, 0.13)); txt('error = actual − forecast', L + sw * 3, T - 12, C.accent, 'center', 700); }
+  // grid
+  ctx.font = `${narrow ? 10 : 11}px ${font}`; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (let v = lo; v <= hi + 1e-9; v += step) { const y = Y(v); ctx.strokeStyle = C.rule; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(w - R, y); ctx.stroke(); ctx.fillStyle = C.muted; ctx.fillText(fmt0(v), L - 6, y); }
+  ctx.textBaseline = 'alphabetic';
+  // the month to forecast
+  ctx.setLineDash([4, 3]); ctx.strokeStyle = C.muted; ctx.lineWidth = 1; ctx.strokeRect(L + sw * n + 6.5, T + 0.5, sw - 13, ph - 1); ctx.setLineDash([]);
+  if (!(done && f !== 'err')) txt('?', X(n), T + ph / 2, C.muted, 'center', 700);
+  // given forecasts in this view: month -> forecast
+  const given = {}; if (f === 'es') given[n - 1] = P.fLast; if (f === 'err') { given[2] = P.f3; given[3] = P.f4; }
+  const ans = done && f !== 'err' ? P.ans[f] : null, ansCol = { sma: C['m-sma1'], wma: C['m-wma'], es: C['m-es'] }[f];
+  // marks first, labels after: each label takes the first of its spots that clears the marks and the labels placed before it
+  const boxes = [], later = [], fs = narrow ? 11 : 12.5;
+  const keep = (l, r, t, b) => boxes.push({ l, r, t, b });
+  // actual orders: line + dots
+  ctx.strokeStyle = C['ink-2']; ctx.lineWidth = 2; ctx.beginPath(); a.forEach((v, t) => (t ? ctx.lineTo(X(t), Y(v)) : ctx.moveTo(X(t), Y(v)))); ctx.stroke();
+  a.forEach((v, t) => { dot(X(t), Y(v), C.ink, 5.5); keep(X(t) - 6, X(t) + 6, Y(v) - 6, Y(v) + 6); });
+  // given forecasts: error arrow + diamond
+  Object.keys(given).forEach((k) => {
+    const t = +k, F = given[t], x = X(t) + 13;
+    arrow(x, Y(F), Y(a[t]), errCol(a[t] - F)); keep(x - 2, x + 2, Math.min(Y(F), Y(a[t])), Math.max(Y(F), Y(a[t])));
+    diamond(X(t), Y(F), C['m-es']); keep(X(t) - 7, X(t) + 7, Y(F) - 7, Y(F) + 7);
+  });
+  // the answer, inside the month to forecast
+  if (f === 'sma' && done) { ctx.strokeStyle = C['m-sma1']; ctx.lineWidth = 2; ctx.setLineDash([6, 4]); ctx.beginPath(); ctx.moveTo(L + sw + 6, Y(P.ans.sma)); ctx.lineTo(X(n), Y(P.ans.sma)); ctx.stroke(); ctx.setLineDash([]); }
+  if (f === 'wma' && done) { ctx.strokeStyle = C.muted; ctx.lineWidth = 1.5; ctx.setLineDash([3, 4]); ctx.beginPath(); ctx.moveTo(L + sw + 6, Y(P.ans.sma)); ctx.lineTo(L + sw * n - 4, Y(P.ans.sma)); ctx.stroke(); ctx.setLineDash([]); }
+  if (f === 'es' && done) {
+    const xF = X(n - 1);
+    ctx.strokeStyle = C['m-es']; ctx.lineWidth = 1.5; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(xF + 8, Y(P.fLast)); ctx.lineTo(X(n), Y(P.fLast)); ctx.stroke(); ctx.setLineDash([]);
+    arrow(X(n), Y(P.fLast), Y(P.ans.es), C['m-es']); keep(X(n) - 2, X(n) + 2, Math.min(Y(P.fLast), Y(P.ans.es)), Math.max(Y(P.fLast), Y(P.ans.es)));
+  }
+  if (ans != null) { dot(X(n), Y(ans), ansCol); keep(X(n) - 6, X(n) + 6, Y(ans) - 6, Y(ans) + 6); }
+  // the student's answer: a ring to the right of the answer
+  const xr = X(n) + Math.min(18, sw / 2 - 9);
+  if (you != null && youIn) { ctx.strokeStyle = C.ink; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(xr, Y(you), 7, 0, Math.PI * 2); ctx.stroke(); keep(xr - 9, xr + 9, Y(you) - 9, Y(you) + 9); }
+  // labels; order and forecast numbers are drawn last, so nothing covers them
+  const boxOf = (s, x, y, al, wt) => { ctx.font = `${wt || 600} ${fs}px ${font}`; const wd = ctx.measureText(s).width, l = al === 'right' ? x - wd : al === 'left' ? x : x - wd / 2; return { l: l - 2, r: l + wd + 2, t: y - fs * 0.75 - 2, b: y + (/[gjpqy,()]/.test(s) ? fs * 0.22 : 0) + 2 }; };
+  const free = (b) => b.l >= 0 && b.r <= w && b.t >= T - 4 && b.b <= T + ph + 4 && !boxes.some((o) => b.l < o.r && o.l < b.r && b.t < o.b && o.t < b.b);
+  const label = (s, spots, color, wt, last) => { const [x, y, al] = spots.find(([x, y, al]) => free(boxOf(s, x, y, al, wt))) || spots[0]; boxes.push(boxOf(s, x, y, al, wt)); (last ? later.push([s, x, y, color, al, wt]) : txt(s, x, y, color, al, wt)); };
+  if (f === 'err' && done) { label(`MFE ${fmtN(P.ans.mfe)}`, [[X(n), T + 18, 'center']], C.ink, 700); label(`MAD ${fmt2(P.ans.mad)}`, [[X(n), T + 36, 'center']], C.ink, 700); }
+  if (you != null && !youIn) { const y1 = you > hi ? T + 14 : T + ph - 21; label(`you: ${fmtN(you)}`, [[w - R - 2, y1, 'right']], C.ink, 700); label('(off the chart)', [[w - R - 2, y1 + 15, 'right']], C.ink, 600); }
+  // the answer label before "you", so it gets first pick of the spots that keep the ES step arrow clear
+  if (ans != null) {
+    const spots = [[X(n), Y(ans) - 12, 'center'], [X(n), Y(ans) + 20, 'center']];
+    if (youIn) spots.push([X(n), Math.min(Y(ans), Y(you)) - 14, 'center'], [X(n), Math.max(Y(ans), Y(you)) + 22, 'center']);
+    label(fmt2(ans), spots, ansCol === C['m-sma1'] ? C['m-sma1-text'] : ansCol === C['m-es'] ? C['m-es-text'] : ansCol, 700);
+  }
+  if (you != null && youIn) label('you', [[xr, Y(you) + 22, 'center'], [xr, Y(you) - 14, 'center'], [xr + 3, Y(you) - 15, 'center'], [xr + 11, Y(you) + 4, 'left']], C.ink, 700);
+  a.forEach((v, t) => {
+    const up = [X(t), Y(v) - 10, 'center'], dn = [X(t), Y(v) + 19, 'center'];
+    label(String(v), given[t] != null && given[t] > v ? [dn, [X(t) - 9, Y(v) + 19, 'right'], up] : [up, [X(t) - 9, Y(v) - 10, 'right'], dn], C.ink, 700, true);
+  });
+  Object.keys(given).forEach((k) => { const t = +k, F = given[t]; label('F ' + F, [[X(t), F > a[t] ? Y(F) - 12 : Y(F) + 21, 'center'], [X(t) - 10, Y(F) + 4, 'right']], C['m-es-text'], 700, true); });
+  if (done) Object.keys(given).forEach((k) => {
+    const t = +k, F = given[t], e = a[t] - F, x = X(t) + 13, at = (q) => Y(F) + (Y(a[t]) - Y(F)) * q + 4;
+    label(fmtE(e), [[x + 7, at(0.5), 'left'], [x - 7, at(0.5), 'right'], [x + 7, at(0.8), 'left'], [x + 7, at(0.2), 'left']], errCol(e), 700);
+  });
+  if (f === 'wma' && done) {
+    // next to the dotted line: right end first, then between the months, then the left end; one row further out only if all are taken
+    const ys = Y(P.ans.sma), xs = [[L + sw * n - 8, 'right'], [L + sw * 3, 'center'], [L + sw * 2, 'center'], [L + sw + 10, 'left']];
+    const sp = []; (a[n - 1] >= P.ans.sma ? [16, -7, 29, -20] : [-7, 16, -20, 29]).forEach((dy) => xs.forEach(([x, al]) => sp.push([x, ys + dy, al])));
+    const fits = (s) => sp.some(([x, y, al]) => free(boxOf(s, x, y, al, 600)));
+    label(fits('plain average') || !fits('average') ? 'plain average' : 'average', sp, C.muted, 600); // the short form only where the full one has no room (narrow phones)
+  }
+  later.forEach((d) => txt(...d));
+  // month labels
+  ctx.textBaseline = 'top'; ctx.font = `${narrow ? 10 : 11.5}px ${font}`; ctx.textAlign = 'center';
+  for (let t = 0; t <= n; t++) { ctx.fillStyle = t === n ? C.ink : C.muted; ctx.fillText(practiceView.labels[t], X(t), T + ph + 7); }
+  ctx.textBaseline = 'alphabetic';
+}
+function pracStatus() {
+  const P = prac, a = P.a, nm = P.names, f = practiceView.focus, done = P.checked;
+  const yours = (q) => { const v = pracYou(q); return v == null ? '' : ` Your answer: ${fmtN(v)}${Math.abs(v - P.ans[q]) <= 0.01 + 1e-9 ? ' ✓' : ''}.`; };
+  if (f === 'sma') return `<b>Question 1.</b> The shaded months are the last three: ${nm[1]} ${a[1]}, ${nm[2]} ${a[2]}, ${nm[3]} ${a[3]}. A 3-month simple moving average gives each the same weight.` + (done ? ` The forecast for ${nm[4]} is their average, <b>${fmt2(P.ans.sma)}</b> (the dashed line).${yours('sma')}` : '');
+  if (f === 'wma') return `<b>Question 2.</b> The darker the shading, the larger the weight: ${nm[3]} × ${P.w[0]}, ${nm[2]} × ${P.w[1]}, ${nm[1]} × ${P.w[2]}.` + (done ? ` The weighted forecast, <b>${fmt2(P.ans.wma)}</b>, gives more say to the months with larger weights; the plain average (${fmt2(P.ans.sma)}, dotted line) weights all three equally.${yours('wma')}` : '');
+  if (f === 'es') { const e = a[3] - P.fLast; return `<b>Question 3.</b> The forecast for ${nm[3]} was ${P.fLast} (diamond) and ${a[3]} came in; the arrow is the error, actual − forecast (${e > 0 ? 'up: the forecast was too low' : 'down: the forecast was too high'}).` + (done ? ` Error = ${a[3]} − ${P.fLast} = ${fmtE(e)}. The forecast for ${nm[4]} moves ${Math.round(P.alpha * 100)}% of that error: ${P.fLast} + ${P.alpha} × ${e < 0 ? '(' + fmtI(e) + ')' : e} = <b>${fmt2(P.ans.es)}</b>.${yours('es')}` : ''); }
+  const e3 = a[2] - P.f3, e4 = a[3] - P.f4;
+  const desc = (m, F, A, e) => `${m}: forecast ${F}, actual ${A}${done ? `, error ${fmtE(e)}` : ''} (${e > 0 ? 'arrow up, forecast too low' : 'arrow down, forecast too high'})`;
+  return `<b>Questions 4–5.</b> ${desc(nm[2], P.f3, a[2], e3)}; ${desc(nm[3], P.f4, a[3], e4)}. Each arrow is an error, actual − forecast.` + (done ? ` MFE = average error = <b>${fmtN(P.ans.mfe)}</b>: up and down arrows would cancel, so MFE shows bias. MAD = average arrow length = <b>${fmt2(P.ans.mad)}</b>.${yours('mfe').replace('Your answer', 'Your MFE')}${yours('mad').replace('Your answer', 'Your MAD')}` : '');
+}
+function setPracFocus(q, scroll) {
+  if (!practiceView) return;
+  practiceView.focus = q;
+  document.querySelectorAll('[data-pfocus]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.pfocus === q ? 'true' : 'false'));
+  update();
+  if (scroll && window.innerWidth < 1040) { const s = $('stage'); s.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' }); }
+}
+
+/* ---------- legend, status, calculation, tables ---------- */
+function swatch(color, dash) {
+  const d = dash && dash.length ? ` stroke-dasharray="${dash.join(' ')}"` : '';
+  return `<svg width="22" height="10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="var(--${color})" stroke-width="2.5"${d}/></svg>`;
+}
+function renderLegend() {
+  const parts = [`<span><svg width="12" height="12" aria-hidden="true"><rect x="1" y="1" width="10" height="10" fill="var(--bar)" stroke="var(--bar-edge)"/></svg>Actual orders</span>`];
+  if (S.tab === 'prac') {
+    const f = practiceView ? practiceView.focus : null, done = prac && prac.checked;
+    const pp = [`<span><svg width="22" height="12" aria-hidden="true"><line x1="1" y1="6" x2="21" y2="6" stroke="var(--ink-2)" stroke-width="2"/><circle cx="11" cy="6" r="4" fill="var(--ink)"/></svg>Actual orders</span>`,
+      `<span><svg width="12" height="12" aria-hidden="true"><rect x="1" y="1" width="10" height="10" fill="var(--accent)" opacity="0.35"/></svg>Months the question uses</span>`];
+    const col = { sma: 'm-sma1', wma: 'm-wma', es: 'm-es', err: 'm-es' }[f];
+    if (f === 'es' || f === 'err') pp.push(`<span><svg width="14" height="14" aria-hidden="true"><path d="M7 0 L14 7 L7 14 L0 7 Z" fill="var(--m-es)"/></svg>Given forecast</span><span><svg width="12" height="12" aria-hidden="true"><line x1="6" y1="11" x2="6" y2="1" stroke="var(--danger)" stroke-width="2.5"/></svg>Error up: forecast too low</span><span><svg width="12" height="12" aria-hidden="true"><line x1="6" y1="1" x2="6" y2="11" stroke="var(--m-sma2)" stroke-width="2.5"/></svg>Error down: too high</span>`);
+    if (done && f !== 'err') pp.push(`<span><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="5" fill="var(--${col})"/></svg>Forecast (answer)</span><span><svg width="16" height="16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="var(--ink)" stroke-width="2"/></svg>Your answer</span>`);
+    $('legend').innerHTML = pp.join(''); return;
+  }
+  if (S.tab === 'acc') {
+    const m = byKey(S.accSel);
+    if (!m || !m.f) { $('legend').innerHTML = ''; return; }
+    const ap = [`<span><svg width="22" height="12" aria-hidden="true"><line x1="1" y1="6" x2="21" y2="6" stroke="var(--ink-2)" stroke-width="2"/><circle cx="11" cy="6" r="4" fill="var(--ink)"/></svg>Actual orders</span>`];
+    if (S.accView === 'mad') {
+      $('legend').innerHTML = `<span><svg width="12" height="12" aria-hidden="true"><rect x="2" y="1" width="8" height="10" fill="var(--danger)" opacity="0.85"/></svg>|Error|, forecast was too low</span><span><svg width="12" height="12" aria-hidden="true"><rect x="2" y="1" width="8" height="10" fill="var(--m-sma2)" opacity="0.85"/></svg>|Error|, forecast was too high (flipped up)</span><span><svg width="24" height="10" aria-hidden="true"><line x1="1" y1="5" x2="23" y2="5" stroke="var(--ink)" stroke-width="2.5" stroke-dasharray="8 5"/></svg>MAD = average |error|</span><span><svg width="24" height="10" aria-hidden="true"><line x1="1" y1="5" x2="23" y2="5" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="3 4"/></svg>MFE, for comparison</span>`; return;
+    }
+    if (S.accView === 'mfe') ap.length = 0;
+    if (S.accView === 'fc' && m && m.f) ap.push(`<span><svg width="22" height="14" aria-hidden="true"><line x1="1" y1="7" x2="21" y2="7" stroke="var(--${m.color})" stroke-width="1.5" stroke-dasharray="5 4"/><path d="M11 1 L17 7 L11 13 L5 7 Z" fill="var(--${m.color})"/></svg>${m.name}: forecast</span>`);
+    if (S.accView === 'mfe') ap.push(`<span><svg width="24" height="10" aria-hidden="true"><line x1="1" y1="5" x2="23" y2="5" stroke="var(--ink)" stroke-width="2.5" stroke-dasharray="8 5"/></svg>MFE = average error</span>`);
+    ap.push(`<span><svg width="12" height="14" aria-hidden="true"><line x1="6" y1="13" x2="6" y2="4" stroke="var(--danger)" stroke-width="2.5"/><path d="M6 0 L10 6 L2 6 Z" fill="var(--danger)"/></svg>Error up: forecast too low</span><span><svg width="12" height="14" aria-hidden="true"><line x1="6" y1="1" x2="6" y2="10" stroke="var(--m-sma2)" stroke-width="2.5"/><path d="M6 14 L10 8 L2 8 Z" fill="var(--m-sma2)"/></svg>Error down: forecast too high</span>`);
+    $('legend').innerHTML = ap.join(''); return;
+  }
+  if (S.tab === 'comp') {
+    if (S.layers.trend) parts.push(`<span>${swatch('layer-trend', [6, 4])}Level + trend</span>`);
+    if (S.layers.curve) parts.push(`<span>${swatch('layer-curve')}Trend + season</span>`);
+    if (S.layers.rand) parts.push(`<span>${swatch('layer-rand')}Random part</span>`);
+  }
+  chartMethods().forEach((m) => { parts.push(`<span>${swatch(m.color, m.dash)}${m.name}${m.f ? '' : ' (check the weights)'}</span>`); });
+  $('legend').innerHTML = parts.join('');
+}
+function statusText() {
+  if (S.tab === 'prac') return prac && practiceView ? pracStatus() : '';
+  const t = S.cursor;
+  let s = `<b>${monthName(t)}</b>: `;
+  s += t < N ? `${fmt0(A[t])} cases ordered.` : 'orders not known yet.';
+  if (S.tab === 'acc') {
+    const m = byKey(S.accSel); if (!m || !m.f) return s + ' ' + wProblem();
+    const F = r2(m.f[t]), e = r2(A[t] - F);
+    const q = accuracy(A, m.f, EVAL_FROM, N), dn = q.rows.filter((r) => r.e < 0).length, upn = q.rows.filter((r) => r.e > 0).length;
+    const mf = r2(q.mfe), md = r2(q.mad);
+    if (S.accView === 'mfe') return `<b>MFE view</b>: each arrow is one month's error, measured from zero. The dashed line is their average, MFE = <b>${fmtS(mf)}</b>${mf > 0 ? ': above zero, so the forecasts were too low on average' : mf < 0 ? ': below zero, so the forecasts were too high on average' : ''}. ${monthName(t)}: error ${fmtS(e)}.`;
+    if (S.accView === 'mad') {
+      if (!dn && !upn) return `<b>MAD view</b>: every error is 0, because every forecast was exact, so MFE = MAD = 0. ${monthName(t)}: |error| = 0.00.`;
+      return `<b>MAD view</b>: every error is drawn above zero as its absolute value${dn ? `; the ${dn} blue one${dn === 1 ? '' : 's'} came from below` : ''}. The bold dashed line is their average length, MAD = <b>${fmt2(md)}</b>` +
+        (dn && upn ? `, above the MFE (${fmtS(mf)}) because up and down errors no longer cancel.` : `, the same size as the MFE (${fmtS(mf)}): all errors point the same way, so there was nothing to cancel.`) + ` ${monthName(t)}: |error| = ${fmt2(Math.abs(e))}.`;
+    }
+    return s + ` The ${lc(m.name)} forecast was ${fmt2(F)}; error = ${fmt0(A[t])} − ${fmt2(F)} = ${fmtS(e)} (${e > 0 ? 'arrow up: forecast too low' : e < 0 ? 'arrow down: forecast too high' : 'exact'}).`;
+  }
+  if (S.tab === 'comp' && t < N) { const r = D[t]; s += ` Level ${fmt0(r.level)}, trend ${fmtS(r.trend)}, season ${fmtS(r.seas)}, random ${fmtS(r.noise)}.`; return s; }
+  chartMethods().forEach((m) => {
+    if (!m.f) return; const v = m.f[t];
+    if (v == null) { s += ` ${m.short}: no forecast yet (not enough history).`; return; }
+    s += ` ${m.short} forecast ${fmt2(v)}`;
+    if (t < N) s += ` (error ${fmtS(r2(A[t] - r2(v)))})`;
+    s += '.';
+  });
+  return s;
+}
+function ariaChart() {
+  const names = chartMethods().filter((m) => m.f).map((m) => m.name);
+  if (S.tab === 'acc') {
+    const m = byKey(S.accSel); if (!m || !m.f) return 'Chart of the last 12 months. ' + wProblem();
+    const q = accuracy(A, m.f, EVAL_FROM, N);
+    if (S.accView === 'mfe') return `Chart of the 12 errors of the ${lc(m.name)} in the last 12 months (Year 3), each an arrow from zero: up where the forecast was too low, down where it was too high. A dashed line marks their average, MFE ${fmtS(r2(q.mfe))} cases. The selected month is ${monthName(S.cursor)}. The text below the chart describes it in words.`;
+    if (S.accView === 'mad') return `Chart of the 12 absolute errors of the ${lc(m.name)} in the last 12 months (Year 3), all drawn above zero; the negative errors are flipped up. A bold dashed line marks their average, MAD ${fmt2(q.mad)} cases, and a faint line the MFE, ${fmtS(r2(q.mfe))}. The selected month is ${monthName(S.cursor)}. The text below the chart describes it in words.`;
+    return `Line chart of the last 12 months (Year 3): actual orders and the ${lc(m.name)} forecasts, with an arrow from each forecast to the actual orders, pointing up where the forecast was too low and down where it was too high. MFE ${fmtS(r2(q.mfe))} cases, MAD ${fmt2(q.mad)} cases. The selected month is ${monthName(S.cursor)}. The text below the chart describes it in words.`;
+  }
+  if (S.tab === 'prac') return 'Line chart of the practice problem: four months of orders and the month to forecast, with the selected question\'s calculation drawn on it. The text below the chart describes it in words.';
+  return `Bar chart of monthly orders for 36 months, Year 1 to Year 3, plus the next month, which is not known yet. ` + (names.length ? `Forecast lines: ${names.join('; ')}. ` : '') + `The selected month is ${monthName(S.cursor)}. The text below the chart describes it in words.`;
+}
+function calcHTML() {
+  const t = S.cursor;
+  if (S.tab === 'comp') {
+    $('calc-h').textContent = `${monthName(t)}: what made the orders`;
+    if (t >= N) return '<p>Next month has not happened yet. Its trend and season can be extended from the past; its random part cannot be known in advance.</p>';
+    const r = D[t];
+    return `<p class="formula">Orders = level + trend + season + random<br>= ${fmt0(r.level)}${term(r.trend)}${term(r.seas)}${term(r.noise)} = ${fmt2(r.exact)} → <b>${fmt0(r.a)} cases</b></p>` +
+      `<p class="label-sm">Trend = ${S.trendOn ? fmt0(S.trend) : 0} cases × month ${t} (counting from January, Year 1 = month 0). Season and random are rounded to two decimals.</p>`;
+  }
+  if (S.tab === 'acc') return accCalcHTML();
+  const key = calcMethodKey(); const m = byKey(key);
+  if (!m) { $('calc-h').textContent = 'This month'; return '<p>Turn on the forecast including trend* to see its calculation.</p>'; }
+  $('calc-h').textContent = `${monthName(t)}: ${m.name}`;
+  if (!m.f) return `<p class="pos"><b>${wProblem()}</b></p>`;
+  const v = m.f[t];
+  const lab = (i) => `A<sub>${monthShort(i)}</sub>`;
+  let html = '';
+  if (key === 'sma1' || key === 'sma2') {
+    const n = key === 'sma1' ? S.n1 : S.n2;
+    if (v == null) return `<p>${art(n)} ${n}-month average needs ${n} past months; the first forecast is for ${monthName(n)}.</p>`;
+    const idx = []; for (let i = 1; i <= n; i++) idx.push(t - i);
+    html += `<p class="formula">F<sub>${monthShort(t)}</sub> = (${idx.map(lab).join(' + ')}) / ${n}<br>= (${idx.map((i) => fmt0(A[i])).join(' + ')}) / ${n} = <b>${fmt2(v)}</b></p>`;
+  } else if (key === 'wma') {
+    if (v == null) return `<p>This weighted average needs ${S.w.length} past months; the first forecast is for ${monthName(S.w.length)}.</p>`;
+    const idx = S.w.map((_, i) => t - 1 - i);
+    html += `<p class="formula">F<sub>${monthShort(t)}</sub> = ${idx.map((i, k) => `${fmtW(S.w[k])} × ${lab(i)}`).join(' + ')}<br>= ${idx.map((i, k) => `${fmtW(S.w[k])} × ${fmt0(A[i])}`).join(' + ')} = <b>${fmt2(v)}</b></p>`;
+  } else if (key === 'es') {
+    if (t === 0) html += `<p class="formula">F<sub>${monthShort(0)}</sub> = <b>${fmt2(S.f0)}</b> (the given starting forecast)</p>`;
+    else {
+      const fp = r2(m.f[t - 1]); const e = r2(A[t - 1] - fp);
+      html += `<p class="formula">F<sub>${monthShort(t)}</sub> = F<sub>${monthShort(t - 1)}</sub> + α × (A<sub>${monthShort(t - 1)}</sub> − F<sub>${monthShort(t - 1)}</sub>)<br>= ${fmt2(fp)} + ${S.alpha.toFixed(2)} × (${fmt0(A[t - 1])} − ${fmt2(fp)})<br>= ${fmt2(fp)} + ${S.alpha.toFixed(2)} × ${e < 0 ? '(' + fmtN(e) + ')' : fmt2(e)} = <b>${fmt2(v)}</b></p>`;
+      html += `<p class="label-sm">Last month's error was ${fmtS(e)} cases; the forecast moves ${Math.round(S.alpha * 100)}% of the way toward last month's actual orders (the red bar and the step on the chart).</p>`;
+    }
+  } else if (key === 'fit') {
+    const P = m.parts;
+    if (t === 0) html += `<p class="formula">Start: F = ${fmt2(S.f0)}, T = ${fmtN(S.t0)}, FIT = ${fmt2(S.f0 + S.t0)}</p>`;
+    else html += `<p class="formula">F = ${fmt2(P.FIT[t - 1])} + ${S.alpha.toFixed(2)} × (${fmt0(A[t - 1])} − ${fmt2(P.FIT[t - 1])}) = ${fmt2(P.F[t])}<br>T = ${fmtN(P.T[t - 1])} + ${S.delta.toFixed(2)} × (${fmt2(P.F[t])} − ${fmt2(P.FIT[t - 1])}) = ${fmtN(P.T[t])}<br>FIT = F + T = ${fmt2(P.F[t])}${term(P.T[t])} = <b>${fmt2(v)}</b></p><p class="label-sm">* Starred slides 39–45, not tested.</p>`;
+  }
+  if (v != null) {
+    if (t < N) { const e = r2(A[t] - r2(v)); html += `<p>Actual orders: <b>${fmt0(A[t])}</b>. Error = actual − forecast = ${fmt0(A[t])} − ${fmt2(v)} = <b class="${e > 0 ? 'pos' : e < 0 ? 'neg' : ''}">${fmtS(e)}</b> (${e > 0 ? 'forecast too low' : e < 0 ? 'forecast too high' : 'exact'}).</p>`; }
+    else html += `<p>This is the plan for next month: about <b>${fmt0(v)} cases</b>. The actual orders are not known yet.</p>`;
+  }
+  return html;
+}
+function accCalcHTML() {
+  const m = byKey(S.accSel), t = S.cursor;
+  $('calc-h').textContent = m ? `${m.name}: MFE and MAD over the last 12 months` : 'MFE and MAD';
+  if (!m || !m.f) return `<p class="pos"><b>${wProblem()}</b></p>`;
+  const q = accuracy(A, m.f, EVAL_FROM, N);
+  const up = q.rows.filter((r) => r.e > 0), dn = q.rows.filter((r) => r.e < 0);
+  const sUp = r2(up.reduce((s, r) => s + r.e, 0)), sDn = r2(dn.reduce((s, r) => s - r.e, 0));
+  const mfe = r2(q.mfe);
+  let html = `<p>Errors (actual − forecast), January to December of Year 3:</p><p class="formula errs">${q.rows.map((r) => `<span class="${r.e > 0 ? 'pos' : r.e < 0 ? 'neg' : ''}${r.t === t ? ' cur' : ''}">${MONTHS[r.t % 12]} ${fmtS(r.e)}</span>`).join(', ')}</p>`;
+  html += `<p class="formula">MFE = sum of errors / 12 = ${fmtS(q.sum)} / 12 = <b>${fmtS(mfe)}</b><br>MAD = sum of |errors| / 12 = ${fmt2(q.sumAbs)} / 12 = <b>${fmt2(q.mad)}</b></p>`;
+  const avg = mfe > 0 ? ', so on average the forecasts were too low' : mfe < 0 ? ', so on average the forecasts were too high' : '';
+  if (!up.length && !dn.length) html += `<p class="label-sm">Every forecast was exact: all 12 errors are 0, so MFE = MAD = 0.</p>`;
+  else html += up.length && dn.length
+    ? `<p class="label-sm">${up.length} error${up.length === 1 ? '' : 's'} up (forecast too low) add up to ${fmt2(sUp)}; ${dn.length} down (too high) add up to ${fmt2(sDn)}. In the MFE they cancel: (${fmt2(sUp)} − ${fmt2(sDn)}) / 12 = ${fmtS(mfe)}${avg}. In the MAD every error counts with its full size.</p>`
+    : `<p class="label-sm">All the errors point the same way (${up.length ? 'forecast too low' : 'forecast too high'}), so nothing cancels: the MFE and the MAD have the same size.${mfe > 0 ? ' On average the forecasts were too low.' : mfe < 0 ? ' On average the forecasts were too high.' : ''}</p>`;
+  const r = q.rows.find((x) => x.t === t);
+  if (r) html += `<p><b>${monthName(t)}</b>: actual ${fmt0(r.a)}, forecast ${fmt2(r.f)}, error <b class="${r.e > 0 ? 'pos' : r.e < 0 ? 'neg' : ''}">${fmtS(r.e)}</b> (${r.e > 0 ? 'forecast too low' : r.e < 0 ? 'forecast too high' : 'exact'}).</p>`;
+  return html;
+}
+function renderAccTable() {
+  const ms = tableMethods();
+  const accs = ms.map((m) => ({ m, q: m.f ? accuracy(A, m.f, EVAL_FROM, N) : null }));
+  const valid = accs.filter((x) => x.q && x.q.n === 12);
+  const best = valid.length ? valid.reduce((b, x) => (x.q.mad < b.q.mad ? x : b)) : null;
+  const acc = S.tab === 'acc';
+  let h = acc ? `<caption>Last 12 months (Year 3): MFE and MAD of the three methods</caption><thead><tr><th class="l" scope="col">Method</th><th scope="col">MFE</th><th scope="col">MAD</th></tr></thead><tbody>`
+    : `<caption>Next month's forecast, and accuracy over the last 12 months (Year 3)</caption><thead><tr><th class="l" scope="col">Method</th><th scope="col">Next month's forecast</th><th scope="col">MFE</th><th scope="col">MAD</th></tr></thead><tbody>`;
+  accs.forEach(({ m, q }) => {
+    const cls = best && best.m.key === m.key && S.tab === 'acc' ? ' class="win"' : '';
+    const nm = `<span class="sw" style="border-color: var(--${m.color})"></span>${m.name}${acc && m.key === S.accSel ? ' (on the chart)' : ''}`;
+    if (!q) { h += `<tr${cls}><th class="l" scope="row">${nm}</th><td colspan="${acc ? 2 : 3}">check the weights</td></tr>`; return; }
+    h += `<tr${cls}><th class="l" scope="row">${nm}</th>${acc ? '' : `<td>${fmt2(m.f[N])}</td>`}<td>${fmtS(r2(q.mfe))}</td><td>${fmt2(q.mad)}</td></tr>`;
+  });
+  h += '</tbody>';
+  $('acc-table').innerHTML = h;
+  $('acc-note').textContent = acc && best ? `Lowest MAD: ${best.m.name}. MFE > 0 means the forecasts were too low on average (biased low).` : 'MFE = average of (actual − forecast); MAD = average of |actual − forecast|, both over the last 12 months (Year 3).';
+}
+function renderDataTable() {
+  const ms = S.tab === 'comp' ? [] : (S.tab === 'acc' ? [byKey(S.accSel)].filter(Boolean) : chartMethods()).filter((m) => m.f);
+  let h = `<caption>Orders${ms.length ? ' and forecasts' : ''} by month</caption><thead><tr><th class="l" scope="col">Month</th><th scope="col">Actual</th>`;
+  ms.forEach((m) => { h += `<th scope="col">${m.short}</th>`; if (S.tab === 'acc') h += '<th scope="col">Error</th><th scope="col">|Error|</th>'; });
+  h += '</tr></thead><tbody>';
+  const from = S.tab === 'acc' ? EVAL_FROM : 0;
+  for (let t = from; t <= N; t++) {
+    h += `<tr${t === S.cursor ? ' class="cur"' : ''}><th class="l" scope="row">${monthShort(t)}${t === N ? ' (next)' : ''}</th><td>${t < N ? fmt0(A[t]) : '?'}</td>`;
+    ms.forEach((m) => { const v = m.f[t]; h += `<td>${v == null ? '–' : fmt2(v)}</td>`; if (S.tab === 'acc') { if (t < N && v != null) { const e = r2(A[t] - r2(v)); h += `<td>${fmtS(e)}</td><td>${fmt2(Math.abs(e))}</td>`; } else h += '<td></td><td></td>'; } });
+    h += '</tr>';
+  }
+  h += '</tbody>';
+  if (S.tab === 'acc' && ms.length) {
+    const q = accuracy(A, ms[0].f, EVAL_FROM, N);
+    h += `<tfoot><tr><th class="l" scope="row">Year 3</th><td></td><td></td><td>Σ = ${fmtS(q.sum)}</td><td>Σ = ${fmt2(q.sumAbs)}</td></tr><tr><th class="l" scope="row">Average</th><td></td><td></td><td>MFE = ${fmtS(q.sum)} / 12 = ${fmtS(r2(q.mfe))}</td><td>MAD = ${fmt2(q.sumAbs)} / 12 = ${fmt2(q.mad)}</td></tr></tfoot>`;
+  }
+  $('data-table').innerHTML = h;
+}
+
+/* ---------- controls ---------- */
+const RANGE = {
+  trend: { label: 'Trend', on: 'trendOn', min: 0, max: 25, step: 1, out: (v) => `+${v} cases a month`, hint: 'Growth of the sport.' },
+  amp: { label: 'Season', on: 'seasonOn', min: 0, max: 250, step: 10, out: (v) => `± ${v} cases`, hint: 'Outdoor season: high in June–July, low in December–January.' },
+  sd: { label: 'Random', on: 'noiseOn', min: 0, max: 80, step: 5, out: (v) => `σ = ${v} cases`, hint: 'Weather, tournaments, a big club order.' },
+  n1: { label: 'Short moving average: n', min: 2, max: 12, step: 1, out: (v) => `${v} months` },
+  n2: { label: 'Long moving average: n', min: 2, max: 12, step: 1, out: (v) => `${v} months` },
+  alpha: { label: 'Smoothing constant α', min: 0.05, max: 0.95, step: 0.05, out: (v) => v.toFixed(2), hint: 'Small α: stable, slow to react. Large α: responsive.' },
+};
+let uid = 0;
+function buildControls() {
+  document.querySelectorAll('[data-controls]').forEach((box) => {
+    box.innerHTML = '';
+    box.dataset.controls.split(' ').forEach((k) => { const el = makeControl(k); if (el) box.appendChild(el); });
+  });
+}
+function makeControl(k) {
+  const id = `c${++uid}`;
+  const wrap = document.createElement('div'); wrap.className = 'ctl';
+  if (RANGE[k]) {
+    const r = RANGE[k];
+    const onBox = r.on ? `<label class="check"><input type="checkbox" data-on="${r.on}" ${S[r.on] ? 'checked' : ''}> ${r.label}</label>` : `<label for="${id}">${r.label}</label>`;
+    wrap.innerHTML = `<div class="ctl-top">${onBox}<output for="${id}" data-out="${k}">${r.out(S[k])}</output></div><input id="${id}" type="range" min="${r.min}" max="${r.max}" step="${r.step}" value="${S[k]}" data-key="${k}"${r.on ? ` aria-label="${r.label} strength"` : ''}>` + (r.hint ? `<p class="ctl-hint">${r.hint}</p>` : '');
+    return wrap;
+  }
+  switch (k) {
+    case 'layers':
+      wrap.innerHTML = `<p class="ctl-top"><b>Show on the chart</b></p><div class="opts"><label><input type="checkbox" data-layer="trend"> Show trend line</label><label><input type="checkbox" data-layer="curve"> Show trend + season</label><label><input type="checkbox" data-layer="rand"> Show the random part</label></div>`;
+      return wrap;
+    case 'seed':
+      wrap.innerHTML = `<div class="row"><button class="btn" type="button" data-act="newseed">New random orders</button></div>`;
+      return wrap;
+    case 'w':
+      wrap.innerHTML = `<fieldset class="ctl"><legend>Weighted moving average: weights</legend><div class="wgrid">` +
+        ['Last month', '2 months ago', '3 months ago'].map((lab, i) => `<label>${lab}<input type="text" inputmode="decimal" data-w="${i}" value="${S.w[i]}"></label>`).join('') +
+        `</div><p class="wsum" data-wsum></p></fieldset>`;
+      return wrap;
+    case 'calcma':
+      wrap.innerHTML = `<fieldset class="ctl"><legend>Show the calculation for</legend><div class="opts">` +
+        [['sma1', 'Short SMA'], ['sma2', 'Long SMA'], ['wma', 'WMA']].map(([v, l]) => `<label><input type="radio" name="calcma${id}" data-radio="calcMa" value="${v}" ${S.calcMa === v ? 'checked' : ''}> ${l}</label>`).join('') + `</div></fieldset>`;
+      return wrap;
+    case 'calcplay':
+      wrap.innerHTML = `<label for="${id}">Show the calculation for</label><select id="${id}" data-select="calcPlay"></select>`;
+      return wrap;
+    case 'accsel':
+      wrap.innerHTML = `<fieldset class="ctl"><legend>Method on the chart</legend><div class="opts">` +
+        [['sma1', `<span data-accname>${S.n1}-month simple moving average</span>`], ['wma', 'Weighted moving average'], ['es', 'Exponential smoothing']].map(([v, l]) => `<label><input type="radio" name="accsel${id}" data-radio="accSel" value="${v}" ${S.accSel === v ? 'checked' : ''}> ${l}</label>`).join('') + `</div></fieldset>`;
+      return wrap;
+    case 'steady':
+      wrap.innerHTML = `<fieldset class="ctl"><legend>Orders</legend><div class="opts"><label><input type="radio" name="steady${id}" data-steady="0" ${S.steady ? '' : 'checked'}> Our orders (trend + season + random)</label><label><input type="radio" name="steady${id}" data-steady="1" ${S.steady ? 'checked' : ''}> Steady orders (random only)</label></div></fieldset>`;
+      return wrap;
+    case 'fit':
+      wrap.innerHTML = `<div class="starbox"><label class="check"><input type="checkbox" data-on="fitOn" ${S.fitOn ? 'checked' : ''}> Add the forecast including trend*</label><div class="ctl-top"><label for="${id}">Trend smoothing constant δ</label><output for="${id}" data-out="delta">${S.delta.toFixed(2)}</output></div><input id="${id}" type="range" min="0.05" max="0.95" step="0.05" value="${S.delta}" data-key="delta"><p class="note-star">* Starred slides 39–45, not tested. It adds a separate trend estimate T to the smoothed forecast, with its own constant δ; α is the same as above.</p></div>`;
+      return wrap;
+    case 'show':
+      wrap.innerHTML = `<fieldset class="ctl"><legend>Draw these forecasts</legend><div class="opts">` +
+        [['sma1', 'Short SMA'], ['sma2', 'Long SMA'], ['wma', 'WMA'], ['es', 'Exponential smoothing']].map(([v, l]) => `<label><input type="checkbox" data-show="${v}" ${S.show[v] ? 'checked' : ''}> ${l}</label>`).join('') + `</div></fieldset>`;
+      return wrap;
+  }
+  return null;
+}
+function syncControls() {
+  document.querySelectorAll('input[type="range"][data-key]').forEach((el) => { el.value = S[el.dataset.key]; const on = RANGE[el.dataset.key] && RANGE[el.dataset.key].on; el.disabled = on ? !S[on] : (el.dataset.key === 'delta' ? !S.fitOn : false); });
+  document.querySelectorAll('output[data-out]').forEach((el) => { const k = el.dataset.out; el.textContent = RANGE[k] ? RANGE[k].out(S[k]) : S[k].toFixed(2); });
+  document.querySelectorAll('input[data-on]').forEach((el) => { el.checked = !!S[el.dataset.on]; });
+  document.querySelectorAll('input[data-layer]').forEach((el) => { el.checked = !!S.layers[el.dataset.layer]; });
+  document.querySelectorAll('input[data-w]').forEach((el) => { if (document.activeElement !== el) { const v = S.w[+el.dataset.w]; el.value = isFinite(v) ? v : ''; } });
+  document.querySelectorAll('[data-wsum]').forEach((el) => { el.textContent = wOK() ? 'Sum of weights = 1 ✓' : wProblem(); el.className = 'wsum ' + (wOK() ? 'ok' : 'bad'); });
+  document.querySelectorAll('input[data-radio]').forEach((el) => { el.checked = S[el.dataset.radio] === el.value; });
+  document.querySelectorAll('[data-accname]').forEach((el) => { el.textContent = `${S.n1}-month simple moving average`; });
+  document.querySelectorAll('input[data-steady]').forEach((el) => { el.checked = (el.dataset.steady === '1') === S.steady; });
+  document.querySelectorAll('input[data-show]').forEach((el) => { el.checked = !!S.show[el.dataset.show]; });
+  document.querySelectorAll('select[data-select]').forEach((el) => {
+    const k = el.dataset.select; const opts = M.map((m) => `<option value="${m.key}">${m.name}</option>`).join('');
+    if (el.innerHTML !== opts) el.innerHTML = opts;
+    if (!byKey(S[k])) S[k] = 'es';
+    el.value = S[k];
+  });
+}
+function onInput(e) {
+  const el = e.target;
+  if (el.dataset.key) { S[el.dataset.key] = parseFloat(el.value); }
+  else if (el.dataset.on) { S[el.dataset.on] = el.checked; }
+  else if (el.dataset.layer) { S.layers[el.dataset.layer] = el.checked; }
+  else if (el.dataset.w != null) { const v = parseNum(el.value, true); S.w[+el.dataset.w] = v == null ? NaN : v; }
+  else if (el.dataset.radio) { S[el.dataset.radio] = el.value; }
+  else if (el.dataset.steady != null) { S.steady = el.dataset.steady === '1'; }
+  else if (el.dataset.show) { S.show[el.dataset.show] = el.checked; }
+  else if (el.dataset.select) { S[el.dataset.select] = el.value; }
+  else return;
+  update();
+}
+function onClick(e) {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.hasAttribute('data-reset')) { resetTab(); return; }
+  if (b.dataset.accview) { setAccView(b.dataset.accview); return; }
+  if (b.dataset.act === 'newseed') { S.seed = 1 + Math.floor(Math.random() * 1e6); update(); return; }
+  if (b.dataset.jump) { const t = $(b.dataset.jump); t.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' }); t.focus({ preventScroll: true }); }
+}
+function resetTab() { stop(); const tab = S.tab; S = clone(DEFAULTS); S.tab = tab; S.cursor = TAB_START[tab]; accFlip = 1; update(); }
+
+/* ---------- cursor, play ---------- */
+const reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+let timer = null;
+function bounds() { return S.tab === 'acc' ? [EVAL_FROM, N - 1] : [0, N]; }
+function setCursor(t) { const [lo, hi] = bounds(); S.cursor = Math.max(lo, Math.min(hi, t)); update(); }
+function firstForecastMonth() { const k = calcMethodKey(); const m = k && byKey(k); if (!m || !m.f) return 0; return Math.max(0, m.f.findIndex((v) => v != null)); }
+function play() {
+  if (timer) { stop(); return; }
+  const [lo, hi] = bounds();
+  if (S.cursor >= hi) S.cursor = S.tab === 'acc' ? lo : firstForecastMonth();
+  $('play').textContent = 'Pause'; $('status').setAttribute('aria-live', 'off');
+  const step = () => {
+    timer = setTimeout(() => { try { if (S.cursor >= hi) { stop(); return; } setCursor(S.cursor + 1); if (S.cursor >= hi) stop(); else step(); } catch (err) { stop(); showError(err.message); } }, +$('speed').value);
+  };
+  update(); step();
+}
+function stop() { if (timer) clearTimeout(timer); timer = null; $('play').textContent = 'Play'; $('status').setAttribute('aria-live', 'polite'); }
+
+/* ---------- tabs ---------- */
+const TABS = ['comp', 'ma', 'es', 'acc', 'prac', 'play'];
+function selectTab(name, focus) {
+  if (!TABS.includes(name)) name = 'comp';
+  stop();
+  S.tab = name; document.body.dataset.tab = name;
+  TABS.forEach((t) => { const tb = $('tab-' + t), p = $('panel-' + t); const on = t === name; tb.setAttribute('aria-selected', on); tb.tabIndex = on ? 0 : -1; p.hidden = !on; });
+  if (focus) $('tab-' + name).focus();
+  S.cursor = TAB_START[name];
+  if (name === 'prac' && !prac) newProblem();
+  try { history.replaceState(null, '', '#' + name); } catch (err) { /* file:// in some browsers */ }
+  update();
+}
+function onTabKey(e) {
+  const i = TABS.indexOf(e.target.id.replace('tab-', '')); if (i < 0) return;
+  let j = null;
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') j = (i + 1) % TABS.length;
+  else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') j = (i + TABS.length - 1) % TABS.length;
+  else if (e.key === 'Home') j = 0; else if (e.key === 'End') j = TABS.length - 1;
+  if (j != null) { e.preventDefault(); selectTab(TABS[j], true); }
+}
+
+/* ---------- practice ---------- */
+let prac = null, score = { done: 0, right: 0 };
+const WSETS = [[0.5, 0.3, 0.2], [0.6, 0.3, 0.1], [0.7, 0.2, 0.1], [0.5, 0.4, 0.1], [0.4, 0.4, 0.2]];
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function newProblem() {
+  const m0 = Math.floor(Math.random() * 12);
+  const base = 100 + Math.floor(Math.random() * 80);
+  const a = []; for (let i = 0; i < 4; i++) a.push(base + Math.round((Math.random() - 0.5) * 50) + i * Math.round((Math.random() - 0.3) * 8));
+  const names = [0, 1, 2, 3, 4].map((i) => MONTHS_LONG[(m0 + i) % 12]);
+  const w = pick(WSETS); const alpha = pick([0.1, 0.2, 0.3, 0.4, 0.5]);
+  const fLast = a[3] + pick([-1, 1]) * (5 + Math.floor(Math.random() * 20));
+  const f3 = a[2] + pick([-1, 1]) * (2 + Math.floor(Math.random() * 15)), f4 = fLast; // one forecast per month: the same July forecast in questions 3-5
+  const ans = {
+    sma: (a[1] + a[2] + a[3]) / 3,
+    wma: w[0] * a[3] + w[1] * a[2] + w[2] * a[1],
+    es: fLast + alpha * (a[3] - fLast),
+    mfe: ((a[2] - f3) + (a[3] - f4)) / 2,
+    mad: (Math.abs(a[2] - f3) + Math.abs(a[3] - f4)) / 2,
+  };
+  prac = { a, names, w, alpha, fLast, f3, f4, ans, checked: false, user: {} };
+  practiceView = { labels: names.map((n) => n.slice(0, 3)), a, focus: 'sma' };
+  document.querySelectorAll('[data-pfocus]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.pfocus === 'sma' ? 'true' : 'false'));
+  ['sma', 'wma', 'es', 'mfe', 'mad'].forEach((k) => { $('pa-' + k).value = ''; $('pm-' + k).textContent = ''; $('pm-' + k).className = 'mark'; });
+  $('prac-fb').innerHTML = ''; $('prac-score').textContent = score.done ? $('prac-score').textContent : '';
+  $('prac-q').innerHTML = `<p>A sporting-goods store in Fairfax orders cases of balls from the plant. Its orders for the last four months:</p>` +
+    `<div class="table-wrap" tabindex="0" role="region" aria-label="Practice orders table"><table><caption class="sr-only">Orders by month</caption><thead><tr><th class="l" scope="col">Month</th>${names.slice(0, 4).map((n) => `<th scope="col">${n}</th>`).join('')}</tr></thead><tbody><tr><th class="l" scope="row">Orders (cases)</th>${a.map((v) => `<td>${v}</td>`).join('')}</tr></tbody></table></div>` +
+    `<p>Forecast the orders for <b>${names[4]}</b>:</p>` +
+    `<ol class="defs"><li>with a 3-month simple moving average;</li><li>with a weighted moving average with weights ${w[0]} for ${names[3]}, ${w[1]} for ${names[2]}, and ${w[2]} for ${names[1]};</li><li>with exponential smoothing, α = ${alpha}, if the forecast for ${names[3]} was ${fLast}.</li></ol>` +
+    `<p>Then: the forecast for ${names[2]} was ${f3} (and for ${names[3]}, ${f4}, as above). Using those two months, find 4. the MFE and 5. the MAD.</p>`;
+  $('pl-sma').textContent = `1. 3-month SMA for ${names[4]}`; $('pl-wma').textContent = `2. WMA for ${names[4]}`; $('pl-es').textContent = `3. Exponential smoothing for ${names[4]}`;
+  if (S.tab === 'prac') update();
+}
+// Accepts 1,234.5 (thousands comma), 12,5 and 0,500 (decimal comma; weights always read a comma as a decimal point), the − sign and spaces after the sign; anything else is not a number.
+function parseNum(s, decimalComma) {
+  let x = String(s).trim().replace(/[−–]/g, '-').replace(/^([+-])\s+/, '$1');
+  if (x === '') return null;
+  if (!decimalComma && !/^[+-]?0,/.test(x) && /^[+-]?\d{1,3}(,\d{3})+(\.\d+)?$/.test(x)) x = x.replace(/,/g, '');
+  else x = x.replace(',', '.');
+  if (!/^[+-]?(\d+\.?\d*|\.\d+)$/.test(x)) return NaN;
+  return parseFloat(x);
+}
+function checkPractice(e) {
+  e.preventDefault(); if (!prac) return;
+  const P = prac, a = P.a, n = P.names; let right = 0;
+  let answered = 0; const wrong = [];
+  ['sma', 'wma', 'es', 'mfe', 'mad'].forEach((k) => {
+    const v = parseNum($('pa-' + k).value), num = v != null && !isNaN(v), ok = num && Math.abs(v - P.ans[k]) <= 0.01 + 1e-9;
+    P.user[k] = num ? v : null;
+    if (!ok) wrong.push(k === 'mfe' || k === 'mad' ? 'err' : k);
+    if (num) answered++;
+    if (ok) right++;
+    const mk = $('pm-' + k); mk.className = 'mark ' + (v == null ? 'none' : ok ? 'ok' : 'bad');
+    mk.textContent = v == null ? 'No answer yet.' : !num ? 'That is not a number.' : ok ? '✓ Correct' : `✗ Not quite: ${fmtN(P.ans[k])}`;
+  });
+  if (answered === 0) {
+    ['sma', 'wma', 'es', 'mfe', 'mad'].forEach((k) => { $('pm-' + k).textContent = ''; $('pm-' + k).className = 'mark'; });
+    $('prac-fb').innerHTML = '<p class="prac-verdict bad">Enter your answers first, then click Check.</p>';
+    return;
+  }
+  const e3 = a[2] - P.f3, e4 = a[3] - P.f4;
+  $('prac-fb').innerHTML = `<p class="prac-verdict ${right === 5 ? 'ok' : 'bad'}">${right} of 5 correct.</p>` +
+    `<p class="formula">1. SMA = (${a[1]} + ${a[2]} + ${a[3]}) / 3 = ${fmt2(P.ans.sma)}</p>` +
+    `<p class="formula">2. WMA = ${P.w[0]} × ${a[3]} + ${P.w[1]} × ${a[2]} + ${P.w[2]} × ${a[1]} = ${fmt2(P.ans.wma)}</p>` +
+    `<p class="formula">3. F<sub>${n[4]}</sub> = F<sub>${n[3]}</sub> + α × (A<sub>${n[3]}</sub> − F<sub>${n[3]}</sub>) = ${P.fLast} + ${P.alpha} × (${a[3]} − ${P.fLast}) = ${fmt2(P.ans.es)}</p>` +
+    `<p class="formula">Errors (actual − forecast): ${n[2]} ${a[2]} − ${P.f3} = ${fmtE(e3)}; ${n[3]} ${a[3]} − ${P.f4} = ${fmtE(e4)}</p>` +
+    `<p class="formula">4. MFE = (${fmtI(e3)} + ${e4 < 0 ? '(' + fmtI(e4) + ')' : e4}) / 2 = ${fmtN(P.ans.mfe)}</p>` +
+    `<p class="formula">5. MAD = (|${fmtI(e3)}| + |${fmtI(e4)}|) / 2 = (${Math.abs(e3)} + ${Math.abs(e4)}) / 2 = ${fmt2(P.ans.mad)}</p>`;
+  if (!P.checked) { P.checked = true; score.done++; if (right === 5) score.right++; }
+  $('prac-score').textContent = `This visit: ${score.right} of ${score.done} problem${score.done === 1 ? '' : 's'} fully correct at the first check.`;
+  P.checked = true;
+  setPracFocus(wrong.length ? wrong[0] : practiceView.focus, false);
+}
+
+/* ---------- update ---------- */
+let pendingLayout = false;
+function update() {
+  recompute();
+  syncControls();
+  renderLegend();
+  draw();
+  $('status').innerHTML = statusText();
+  cv.setAttribute('aria-label', ariaChart());
+  const [blo, bhi] = bounds(); const sel = $('month-sel'); Array.from(sel.options).forEach((o) => { o.disabled = +o.value < blo || +o.value > bhi; }); if (sel.value !== String(S.cursor)) sel.value = String(S.cursor);
+  $('prev').disabled = S.cursor <= blo; $('next').disabled = S.cursor >= bhi;
+  if (S.tab !== 'prac') { $('calc').innerHTML = calcHTML(); if (S.tab !== 'comp') renderAccTable(); renderDataTable(); }
+  $('chart-cap').innerHTML = S.tab === 'prac' ? 'Practice: orders <span>(cases)</span>' : S.tab === 'acc' && S.accView !== 'fc' ? `${S.accView === 'mad' ? 'Absolute errors' : 'Errors'}, last 12 months <span>(cases)</span>` : 'Monthly orders <span>(cases of 100 balls)</span>';
+  document.querySelectorAll('[data-accview]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.accview === S.accView ? 'true' : 'false'));
+}
+
+/* ---------- pointer on the chart ---------- */
+function slotAt(ev) {
+  if (!geo) return null; const r = cv.getBoundingClientRect(); const x = ev.clientX - r.left;
+  const t = Math.floor((x - geo.L) / geo.sw); return t >= 0 && t < geo.nSlots ? t + (geo.t0 || 0) : null;
+}
+function onMove(ev) {
+  const t = slotAt(ev), tip = $('tip');
+  if (t == null || S.tab === 'prac') { tip.hidden = true; return; }
+  let s = `<b>${monthShort(t)}</b>: ${t < N ? fmt0(A[t]) + ' cases' : 'not known yet'}`;
+  chartMethods().forEach((m) => { if (m.f && m.f[t] != null) { const e = r2(A[t] - r2(m.f[t])); s += `<br>${m.short}: ${fmt2(m.f[t])}` + (S.tab === 'acc' && t < N ? (S.accView === 'mad' ? `<br>|error| ${fmt2(Math.abs(e))}` : `<br>error ${fmtS(e)}`) : ''); } });
+  tip.innerHTML = s; tip.hidden = false;
+  const r = cv.getBoundingClientRect(); tip.style.left = Math.min(r.width - 70, Math.max(70, geo.X(t))) + 'px'; tip.style.top = (ev.clientY - r.top) + 'px';
+}
+
+/* ---------- boot ---------- */
+function boot() {
+  readTheme();
+  try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { readTheme(); draw(); }); } catch (err) { /* older browsers */ }
+  const sel = $('month-sel');
+  sel.innerHTML = Array.from({ length: N + 1 }, (_, t) => `<option value="${t}">${monthShort(t)}${t === N ? ' (next month)' : ''}</option>`).join('');
+  sel.addEventListener('change', () => setCursor(+sel.value));
+  $('prev').addEventListener('click', () => { stop(); setCursor(S.cursor - 1); });
+  $('next').addEventListener('click', () => { stop(); setCursor(S.cursor + 1); });
+  $('play').addEventListener('click', play);
+  buildControls();
+  document.addEventListener('input', onInput);
+  document.addEventListener('change', (e) => { if (e.target.matches('input[type="radio"], input[type="checkbox"], select[data-select]')) onInput(e); });
+  document.addEventListener('click', onClick);
+  TABS.forEach((t) => { $('tab-' + t).addEventListener('click', () => selectTab(t)); $('tab-' + t).addEventListener('keydown', onTabKey); });
+  cv.addEventListener('pointermove', onMove);
+  cv.addEventListener('pointerleave', () => { $('tip').hidden = true; });
+  cv.addEventListener('click', (ev) => { const t = slotAt(ev); if (t != null && S.tab !== 'prac') { stop(); setCursor(t); } });
+  $('prac-form').addEventListener('submit', checkPractice);
+  $('prac-new').addEventListener('click', () => { newProblem(); });
+  document.querySelectorAll('[data-pfocus]').forEach((b) => b.addEventListener('click', () => setPracFocus(b.dataset.pfocus, true)));
+  document.querySelectorAll('input[data-pq]').forEach((el) => el.addEventListener('focus', () => { if (practiceView && practiceView.focus !== el.dataset.pq) setPracFocus(el.dataset.pq, false); }));
+  // Never lay out inside a ResizeObserver callback: flag it and redraw on the next frame.
+  const relayout = () => { if (pendingLayout) return; pendingLayout = true; requestAnimationFrame(() => { pendingLayout = false; try { draw(); } catch (err) { showError(err.message); } }); };
+  if (window.ResizeObserver) new ResizeObserver(relayout).observe(cv.parentElement); else window.addEventListener('resize', relayout);
+  const h = (location.hash || '').replace('#', '');
+  selectTab(TABS.includes(h) ? h : 'comp');
+}
+try { boot(); } catch (err) { showError(err.message); }
+window.__fc = { S: () => S, A: () => A, M: () => M, selectTab, setCursor, update, setAccView, flip: (v) => { if (accAnimId) cancelAnimationFrame(accAnimId); accAnimId = null; accFlip = v; draw(); }, flipState: () => accFlip };
+})();
+</script>
+</body>
+</html>
